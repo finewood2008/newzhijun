@@ -1,0 +1,9 @@
+{
+  "upstream": "http://127.0.0.1:8088",
+  "host": "127.0.0.1",
+  "port": 28730,
+  "publicOrigin": "http://127.0.0.1:28730",
+  "templateId": null,
+  "bindings": {},
+  "memoryPortableImport": false
+}

@@ -1,0 +1,421 @@
+<!doctype html>
+<!--
+  OD web-prototype seed.
+
+  Copy this file to <project>/index.html, then fill `<main id="content">` by
+  pasting blocks from `references/layouts.md`. Every class referenced in
+  layouts.md is defined here — DO NOT remove unused ones unless you also
+  remove their callers, and DO NOT invent new global classes (use inline
+  style="…" for one-off tweaks).
+
+  Theme tokens at the top of `<style>` are the *only* place to set palette
+  and type. They map cleanly onto a DESIGN.md — when an active design system
+  is injected, swap these six variables and everything reflows.
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>知君 · 每一面，都属于你</title>
+  <style>
+    /* ─── tokens ─────────────────────────────────────────────────────────
+       Six variables. Bind them to the active DESIGN.md and stop.
+       Do not introduce raw hex anywhere else in this file. */
+    :root {
+      --bg:      #fafaf7;   /* page background — never #fff */
+      --surface: #ffffff;   /* cards, modals, raised areas */
+      --fg:      #1a1916;   /* primary text — never #000 */
+      --muted:   #6b6964;   /* secondary text, captions */
+      --border:  #e8e5df;   /* hairlines, dividers */
+      --accent:  #c96442;   /* one accent — used at most 2× per screen */
+
+      /* derived — do not change */
+      --accent-soft: color-mix(in oklch, var(--accent) 14%, transparent);
+      --fg-soft:     color-mix(in oklch, var(--fg) 6%, transparent);
+
+      /* type — display = serif (default), body = sans, mono for numerics */
+      --font-display: 'Iowan Old Style', 'Charter', Georgia, 'Times New Roman', serif;
+      --font-body:    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-mono:    ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+      /* scale — clamp() so it works at 1280, 1440, 1920 without media queries */
+      --fs-h1: clamp(44px, 6vw, 76px);
+      --fs-h2: clamp(32px, 4vw, 48px);
+      --fs-h3: 22px;
+      --fs-lead: 19px;
+      --fs-body: 16px;
+      --fs-meta: 13px;
+
+      /* spacing — 8-point grid */
+      --gap-xs: 8px;
+      --gap-sm: 12px;
+      --gap-md: 20px;
+      --gap-lg: 32px;
+      --gap-xl: 56px;
+      --gap-2xl: 96px;
+      --container: 1120px;
+      --gutter: 32px;
+
+      --radius: 10px;
+      --radius-lg: 16px;
+    }
+
+    /* ─── reset & base ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: var(--fs-body);
+      line-height: 1.55;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+    img, svg { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; }
+    p { text-wrap: pretty; }
+    h1, h2, h3, h4 { text-wrap: balance; }
+
+    /* ─── layout primitives ─────────────────────────────────────────── */
+    .container {
+      max-width: var(--container);
+      margin-inline: auto;
+      padding-inline: var(--gutter);
+    }
+    .section {
+      padding-block: clamp(48px, 8vw, var(--gap-2xl));
+    }
+    .section + .section { border-top: 1px solid var(--border); }
+    .stack { display: flex; flex-direction: column; }
+    .stack > * + * { margin-top: var(--gap-md); }
+    .row { display: flex; align-items: center; gap: var(--gap-md); }
+    .row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-md); }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--gap-lg); }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-lg); }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap-md); }
+    .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: var(--gap-xl); align-items: start; }
+    .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: var(--gap-xl); align-items: start; }
+    @media (max-width: 920px) {
+      .grid-2, .grid-3, .grid-4, .grid-2-1, .grid-1-2 { grid-template-columns: 1fr; }
+    }
+
+    /* ─── type ──────────────────────────────────────────────────────── */
+    .h1, h1 { font-family: var(--font-display); font-size: var(--fs-h1); line-height: 1.04; letter-spacing: -0.02em; margin: 0; }
+    .h2, h2 { font-family: var(--font-display); font-size: var(--fs-h2); line-height: 1.1; letter-spacing: -0.015em; margin: 0; }
+    .h3, h3 { font-size: var(--fs-h3); font-weight: 600; line-height: 1.3; letter-spacing: -0.005em; margin: 0; }
+    .lead   { font-size: var(--fs-lead); line-height: 1.55; color: var(--muted); max-width: 60ch; margin: 0; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 var(--gap-md);
+    }
+    .meta { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--muted); }
+    .num  { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+    /* ─── chrome: nav + footer ──────────────────────────────────────── */
+    .topnav {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in oklch, var(--bg) 92%, transparent);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .topnav-inner { display: flex; align-items: center; justify-content: space-between; padding-block: 14px; }
+    .topnav .logo { font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+    .topnav nav { display: flex; gap: var(--gap-lg); }
+    .topnav nav a { font-size: 14px; color: var(--muted); }
+    .topnav nav a:hover { color: var(--fg); }
+    .pagefoot { padding-block: var(--gap-xl); color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); }
+    .pagefoot .row-between { flex-wrap: wrap; gap: var(--gap-md); }
+
+    /* ─── buttons ───────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: -0.005em;
+      transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+    .btn-primary:hover { background: color-mix(in oklch, var(--accent) 88%, black); }
+    .btn-secondary { background: transparent; color: var(--fg); border-color: var(--border); }
+    .btn-secondary:hover { border-color: var(--fg); }
+    .btn-ghost { background: transparent; color: var(--fg); border-color: transparent; padding-inline: 8px; }
+    .btn-ghost:hover { color: var(--accent); }
+    .btn-arrow::after { content: '→'; transition: transform 0.15s ease; }
+    .btn-arrow:hover::after { transform: translateX(2px); }
+
+    /* ─── card / surface ────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+    }
+    .card-flat { background: transparent; border: 0; padding: 0; }
+    .card-rule { background: transparent; border: 0; border-top: 1px solid var(--fg); padding: 24px 0 0; border-radius: 0; }
+
+    /* ─── feature cell (icon + h3 + p) ──────────────────────────────── */
+    .feature .feature-mark {
+      width: 36px; height: 36px;
+      display: grid; place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--accent);
+      margin-bottom: var(--gap-md);
+    }
+    .feature .feature-mark svg { width: 18px; height: 18px; }
+    .feature h3 { margin-bottom: 6px; }
+    .feature p  { margin: 0; color: var(--muted); font-size: 15px; }
+
+    /* ─── stat (big number + label) ─────────────────────────────────── */
+    .stat .stat-num {
+      font-family: var(--font-display);
+      font-size: clamp(56px, 8vw, 96px);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .stat .stat-label { color: var(--muted); font-size: 14px; margin-top: 8px; max-width: 24ch; }
+    .stat .stat-unit  { font-size: 0.5em; opacity: 0.7; margin-left: 2px; }
+
+    /* ─── quote / testimonial ───────────────────────────────────────── */
+    .quote {
+      font-family: var(--font-display);
+      font-size: clamp(24px, 2.6vw, 32px);
+      line-height: 1.32;
+      letter-spacing: -0.01em;
+      max-width: 28ch;
+    }
+    .quote-author { color: var(--muted); font-size: 14px; margin-top: var(--gap-md); }
+    .quote-mark   {
+      font-family: var(--font-display);
+      font-size: 140px; line-height: 0.7;
+      color: var(--accent); opacity: 0.18;
+      margin-bottom: -28px;
+    }
+
+    /* ─── pill / badge / tag ────────────────────────────────────────── */
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .tag {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 12px;
+    }
+
+    /* ─── form field ────────────────────────────────────────────────── */
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 13px; color: var(--muted); }
+    .input, .textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--fg);
+      font: inherit;
+      font-size: 15px;
+    }
+    .input:focus, .textarea:focus {
+      outline: 2px solid var(--accent-soft);
+      border-color: var(--accent);
+    }
+    .textarea { min-height: 96px; resize: vertical; line-height: 1.55; }
+
+    /* ─── table (data-style, no chrome) ─────────────────────────────── */
+    .ds-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .ds-table th, .ds-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+    .ds-table th { color: var(--muted); font-weight: 500; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .ds-table tbody tr:hover { background: var(--fg-soft); }
+    .ds-table .num-col { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+    /* ─── image placeholder (DS-tinted block, never broken <img>) ──── */
+    .ph-img {
+      background:
+        linear-gradient(135deg, var(--accent-soft), var(--fg-soft)),
+        var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      aspect-ratio: 16 / 10;
+      display: grid; place-items: center;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+    .ph-img.square    { aspect-ratio: 1 / 1; }
+    .ph-img.portrait  { aspect-ratio: 3 / 4; }
+    .ph-img.wide      { aspect-ratio: 16 / 9; }
+
+    /* ─── divider ───────────────────────────────────────────────────── */
+    .rule  { border: 0; border-top: 1px solid var(--border); margin: 0; }
+    .rule-strong { border: 0; border-top: 1px solid var(--fg); margin: 0; }
+
+    /* ─── hero variants used by layouts.md ──────────────────────────── */
+    .hero          { padding-block: clamp(80px, 12vw, 160px); }
+    .hero-center   { text-align: center; max-width: 32ch; margin-inline: auto; }
+    .hero h1       { margin-bottom: var(--gap-md); }
+    .hero .lead    { margin-bottom: var(--gap-lg); }
+    .hero-cta      { display: inline-flex; gap: var(--gap-sm); flex-wrap: wrap; }
+    .hero-center .hero-cta { justify-content: center; }
+    .hero-split    { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap-2xl); align-items: center; }
+    @media (max-width: 920px) { .hero-split { grid-template-columns: 1fr; } }
+
+    /* ─── log row (newsletter, blog list, changelog) ────────────────── */
+    .log-row { display: grid; grid-template-columns: 120px 1fr 100px; gap: var(--gap-lg); padding: 22px 0; border-top: 1px solid var(--border); align-items: baseline; }
+    .log-row .meta { color: var(--muted); }
+    .log-row h3 { font-size: 19px; }
+    .log-row .pull { text-align: right; }
+  /* App composition extends the copied editorial seed. */
+:root{--bg:#fffcf6;--surface:#f4efe5;--fg:#2e302c;--muted:#888477;--border:#e4ded2;--accent:#a6452e;--font-display:'Songti SC','STSong','Noto Serif CJK SC',serif;--fs-h1:clamp(34px,3.6vw,54px);--fs-h2:clamp(25px,2.4vw,34px);--fs-h3:20px;--fs-body:14px;--radius-lg:10px}
+[hidden]{display:none!important}button,a,input,textarea,select{-webkit-tap-highlight-color:transparent}button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:4px}button{color:inherit}svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.svg-library{position:absolute;width:0;height:0;overflow:hidden}h3{font-family:var(--font-display);font-weight:500}button{border:0;background:none}button:hover{color:var(--accent)}.eyebrow{color:var(--muted);font-size:10px;letter-spacing:.18em}.workspace{display:grid;grid-template-columns:236px minmax(0,1fr);height:100dvh;min-height:600px}.rail{background:var(--surface);border-right:1px solid var(--border);padding:34px 20px 20px;display:flex;flex-direction:column;min-height:0}.wordmark{display:flex;gap:15px;align-items:center;padding:0 12px 36px}.seal{display:grid;place-items:center;width:40px;height:47px;background:var(--accent);color:var(--bg);border-radius:4px;outline:1px solid color-mix(in srgb,var(--bg) 70%,transparent);outline-offset:-4px;font-family:var(--font-display);font-size:31px}.wordmark strong{display:block;font-family:var(--font-display);font-size:29px;font-weight:500;letter-spacing:.15em;line-height:1.25}.wordmark small{font-size:8px;letter-spacing:.19em;color:var(--muted);display:block;margin-top:7px}.role-select{border:1px solid var(--border);background:var(--bg);border-radius:7px;padding:12px;display:flex;align-items:center;gap:11px;text-align:left;width:100%}.role-letter{width:32px;height:35px;border:1px solid var(--border);background:var(--surface);display:grid;place-items:center;font-family:var(--font-display);font-size:21px;flex:none;border-radius:4px}.role-select>span:nth-child(2){flex:1;min-width:0}.role-select small{display:block;font-size:10px;color:var(--muted);margin-bottom:2px}.role-select b{font-size:14px;font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.role-select>svg{width:14px;color:var(--muted)}.new-dialog{display:flex;align-items:center;gap:9px;justify-content:center;border-bottom:1px solid var(--border);width:100%;padding:21px 0 18px;font-size:13px}.navigation{padding:20px 0 14px;display:grid;gap:5px}.navigation button{display:flex;align-items:center;text-align:left;gap:14px;width:100%;padding:12px;border-radius:5px;font-size:14px;color:color-mix(in srgb,var(--fg) 80%,var(--muted));position:relative}.navigation button small{margin-left:auto;font-family:var(--font-mono);font-size:9px;color:var(--muted)}.navigation button.active{background:color-mix(in srgb,var(--fg) 6%,var(--surface));color:var(--fg)}.navigation button.active:before{content:'';position:absolute;width:2px;height:16px;left:0;background:var(--fg)}.navigation button:hover{background:color-mix(in srgb,var(--fg) 4%,var(--surface))}.history{min-height:0;flex:1;margin-top:21px;overflow:auto}.rail-label{color:var(--muted);font-size:10px;display:flex;justify-content:space-between;padding:0 12px 13px}.rail-label>span{font-size:9px}.history button{width:100%;font-size:12px;text-align:left;padding:11px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:color-mix(in srgb,var(--fg) 76%,var(--muted))}.history button:hover{background:var(--bg);border-radius:5px}.history-empty{font-size:11px;color:var(--muted);padding:0 12px;line-height:1.8}.rail-bottom{border-top:1px solid var(--border);padding-top:14px;margin-top:16px}.rail-bottom>button{display:flex;gap:13px;align-items:center;padding:9px 12px;font-size:13px;width:100%}.account{display:flex;align-items:center;gap:12px;padding:19px 9px 0}.account>span{width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--border);border-radius:50%;font-family:var(--font-display)}.account b{display:block;font-weight:400;font-size:12px}.account small{font-size:9px;color:var(--muted);display:block;margin-top:4px}.main-shell{display:flex;flex-direction:column;min-width:0;min-height:0}.app-header{height:73px;flex:none;padding:0 42px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:12px}.app-header>div{display:flex;align-items:center;gap:14px}.app-header b{font-weight:500}.app-header .crumb{color:var(--border)}.app-header>div>span:first-of-type{color:var(--muted)}.header-right{gap:22px!important}.role-context{display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--border);padding:5px 10px;border-radius:4px;font-size:11px;max-width:150px}.role-context span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.role-context svg{width:12px;height:12px}.preview-label{font-size:10px;color:var(--muted)}.icon-button{padding:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);border-radius:4px}.icon-button:hover{background:var(--surface);color:var(--fg)}.menu-button{display:none}.content{flex:1;overflow:auto;min-height:0;outline:none;scroll-behavior:smooth}.app-foot{display:flex;justify-content:space-between;gap:14px;padding:15px 42px;border-top:1px solid var(--border);font-size:9px;color:var(--muted);flex:none}.app-foot>span:first-child{letter-spacing:.14em}.app-foot .num{font-size:8px;letter-spacing:.06em}.section{border:0!important;padding:45px clamp(28px,4.8vw,76px)}.container{max-width:1200px;padding:0;width:100%}.hero-split{grid-template-columns:minmax(0,1fr) 190px;gap:65px;align-items:start}.chat-home{padding-top:clamp(60px,9vh,100px);padding-bottom:20px;max-width:1230px;margin:auto}.chat-home h1{font-weight:400;line-height:1.35;letter-spacing:.01em}.chat-home .eyebrow{margin-bottom:23px}.chat-home .lead{font-size:14px;line-height:1.9;margin:24px 0 0}.margin-note{padding-top:13px}.margin-note>span{font-family:var(--font-display);font-size:16px;display:block;border-top:1px solid var(--border);padding-top:17px;margin-bottom:15px}.margin-note p{font-size:11px;line-height:2.1;color:var(--muted);margin:0}.margin-note a{font-size:11px;display:flex;gap:14px;margin-top:23px}.margin-note a:after{content:'↗'}.paper-mark{width:90px;height:108px;margin:0 0 25px 0;position:relative;opacity:.7}.paper-mark:before,.paper-mark:after{content:'';position:absolute;border:1px solid var(--border);width:60px;height:82px;left:13px;top:8px;transform:rotate(8deg);border-radius:45% 46% 42% 46%}.paper-mark:after{transform:rotate(-12deg);left:26px;top:17px}.paper-mark span{position:absolute;left:26px;top:43px;font-family:var(--font-display);font-size:26px;color:var(--muted)}.composer{margin:39px 0 0;border:1px solid color-mix(in srgb,var(--fg) 28%,var(--border));padding:22px 23px 15px;border-radius:9px;background:color-mix(in srgb,var(--bg) 65%,var(--surface));max-width:900px}.composer textarea{border:0;resize:none;outline:none;background:none;width:100%;font:inherit;line-height:1.8;min-height:66px;color:var(--fg);padding:0}.composer textarea::placeholder{color:var(--muted)}.composer-footer{display:flex;align-items:center;justify-content:space-between;gap:15px}.composer-footer small{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:6px}.composer-footer small svg{width:12px;height:12px}.composer-footer>div{display:flex;gap:14px;align-items:center}.send{width:35px;height:35px;border-radius:5px;background:var(--accent);color:var(--bg);display:grid;place-items:center}.send:hover{background:color-mix(in srgb,var(--accent) 90%,var(--fg));color:var(--bg)}.chat-hints{display:flex;gap:9px;flex-wrap:wrap;margin-top:19px}.chat-hints button{border-bottom:1px solid var(--border);padding:5px 3px;font-size:11px;margin-right:15px;color:var(--muted)}.chat-hints button:hover{color:var(--fg);border-color:var(--fg)}.recent-block{margin-top:48px;max-width:900px}.section-cap{font-size:10px;color:var(--muted);letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.recent-entries{display:grid;grid-template-columns:1fr 1fr;gap:30px}.recent-entries button{border-top:1px solid var(--border);padding:17px 0;text-align:left;display:block}.recent-entries span{display:block;font-size:10px;color:var(--muted);margin-bottom:7px}.recent-entries strong{font-family:var(--font-display);font-size:18px;font-weight:400}.recent-entries p{margin:9px 0 0;font-size:11px;line-height:1.8;color:var(--muted)}.page-heading{display:flex;justify-content:space-between;gap:30px;align-items:flex-end;margin-bottom:34px}.page-heading h1{font-weight:400;font-size:40px;line-height:1.25}.page-heading p{font-size:12px;color:var(--muted);margin:14px 0 0;line-height:1.8}.page-heading .eyebrow{margin-bottom:14px}.page-heading>.meta{text-align:right;font-size:10px;line-height:2}.memory-groups{display:flex;gap:30px;border-bottom:1px solid var(--border);margin-top:35px;margin-bottom:32px}.memory-groups button{padding:0 0 15px;font-size:13px;position:relative;color:var(--muted);display:flex;align-items:center;gap:10px}.memory-groups button span{font-family:var(--font-mono);font-size:10px;color:var(--muted)}.memory-groups button.active{color:var(--fg)}.memory-groups button.active:after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--fg)}.memory-layout{display:grid;grid-template-columns:146px minmax(0,1fr);gap:38px}.memory-menu{border-right:1px solid var(--border);padding-right:20px;display:flex;flex-direction:column;gap:5px;align-items:stretch}.memory-menu button{font-size:12px;padding:11px 10px;text-align:left;color:var(--muted);border-radius:4px}.memory-menu button.active{background:var(--surface);color:var(--fg)}.memory-menu p{font-size:10px;line-height:1.9;color:var(--muted);margin:26px 10px 0}.reading-heading{display:flex;justify-content:space-between;align-items:center;gap:20px}.reading-heading h2{font-size:25px;font-weight:400}.reading-heading .meta{font-size:10px}.reading-subtitle{font-size:12px;color:var(--muted);line-height:1.8;margin:13px 0 27px}.portrait{display:grid;grid-template-columns:minmax(0,1fr) 195px;gap:35px;border-bottom:1px solid var(--border);padding-bottom:29px;margin-bottom:25px}.portrait-quote{font-family:var(--font-display);font-size:25px;line-height:1.7;margin:0}.portrait-copy{font-size:12px;line-height:2;color:var(--muted);margin:17px 0 0}.portrait-margin{padding:5px 0 0 23px;border-left:1px solid var(--border);font-size:11px;color:var(--muted);line-height:2.1}.portrait-margin b{font-size:12px;font-weight:500;color:var(--fg);display:block;margin-bottom:6px}.portrait-margin a{display:block;margin-top:15px;color:var(--fg)}.memory-tags{display:flex;gap:7px;margin:18px 0 0;flex-wrap:wrap}.tag{border-radius:3px;font-size:10px;padding:3px 8px;background:var(--surface);border-color:transparent}.review-note{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:17px 0;margin:0 0 16px;border-bottom:1px solid var(--border)}.review-note span{font-size:11px;color:var(--muted);line-height:1.9}.review-note b{color:var(--fg);font-weight:500}.review-note button{font-size:11px;white-space:nowrap;display:flex;gap:8px}.entry-list{margin:0}.log-row{grid-template-columns:85px 1fr 74px;gap:18px;padding:21px 0;align-items:start}.log-row h3{font-size:18px;font-family:var(--font-display);font-weight:400;line-height:1.5}.log-row p{font-size:11px;color:var(--muted);line-height:1.9;margin:7px 0 0}.log-row>.meta{font-size:10px;line-height:1.8}.log-row .pull{font-family:var(--font-body);font-size:10px;padding:0;text-align:right;line-height:1.8}.entry-status{display:block;margin-top:5px;color:var(--fg)}.summary-footer{display:flex;justify-content:space-between;padding-top:16px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}.summary-footer button{font-size:10px}.empty-state{text-align:center;padding:75px 20px;border-top:1px solid var(--border)}.empty-state .role-letter{margin:0 auto 22px;width:45px;height:49px;font-size:28px}.empty-state h2{font-size:28px;font-weight:400}.empty-state p{font-size:12px;color:var(--muted);line-height:1.9;margin:18px auto 22px;max-width:36ch}.roles-intro{max-width:58ch;font-size:13px;line-height:2;color:var(--muted);margin:25px 0 35px}.role-row{border-top:1px solid var(--border);padding:27px 0;display:grid;grid-template-columns:45px 1fr 110px;gap:27px;align-items:center}.role-row>.num{font-size:12px;color:var(--muted)}.role-row h2{font-size:27px;font-weight:400;display:flex;align-items:center;gap:15px}.role-row h2 small{font-family:var(--font-body);font-size:10px;color:var(--muted);border:1px solid var(--border);padding:3px 7px;border-radius:3px}.role-row p{font-size:12px;line-height:1.9;color:var(--muted);max-width:62ch;margin:10px 0}.role-row button{font-size:12px;display:flex;align-items:center;justify-content:flex-end;gap:10px}.role-row button svg{width:16px}.role-scope{font-size:10px;color:var(--muted);display:flex;gap:17px}.role-scope span:before{content:'·';margin-right:6px}.roles-footer{border-top:1px solid var(--border);padding-top:30px;display:flex;justify-content:space-between;gap:20px;align-items:center}.roles-footer p{font-size:11px;color:var(--muted);line-height:1.9;margin:0}.btn{font-size:12px;padding:10px 17px;border-radius:5px}.btn-primary{color:var(--bg)}.btn-secondary{border-color:color-mix(in srgb,var(--fg) 25%,var(--border))}.btn svg{width:15px;height:15px}.library-search{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);gap:20px;margin:30px 0 8px}.search-field{display:flex;gap:9px;align-items:center;flex:1;max-width:380px;color:var(--muted)}.search-field input{border:0;background:none;outline:none;color:var(--fg);font:inherit;width:100%;font-size:12px;padding:5px}.search-field:focus-within{outline:1px solid var(--border)}.document-row{display:grid;grid-template-columns:35px 1fr 95px 55px;gap:20px;padding:25px 0;border-bottom:1px solid var(--border);align-items:center}.document-row>svg{width:25px;height:30px;color:var(--muted)}.document-row h3{font-size:20px;margin:0}.document-row p{font-size:10px;color:var(--muted);margin:7px 0 0}.document-row .meta{font-size:10px}.document-row button{font-size:11px;text-align:right}.quiet-note{font-size:11px;color:var(--muted);line-height:1.9;margin-top:27px;display:flex;gap:8px}.quiet-note svg{width:13px;height:13px;margin-top:4px}.settings-layout{display:grid;grid-template-columns:150px minmax(0,700px);gap:42px}.setting-section{padding:26px 0;border-top:1px solid var(--border)}.setting-section h3{font-size:22px;margin-bottom:10px}.setting-section p{font-size:12px;color:var(--muted);line-height:1.9;margin:0 0 22px;max-width:60ch}.setting-heading{display:flex;justify-content:space-between;align-items:center;gap:25px}.switch{white-space:nowrap;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted)}.switch input{appearance:none;width:35px;height:21px;border-radius:20px;background:var(--border);position:relative;cursor:pointer;margin:0}.switch input:checked{background:var(--fg)}.switch input:after{content:'';position:absolute;left:3px;top:3px;width:15px;height:15px;border-radius:50%;background:var(--bg);transition:transform .15s}.switch input:checked:after{transform:translateX(14px)}.option-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}.option-pair label{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--border);border-radius:5px;padding:17px;cursor:pointer;font-size:12px}.option-pair label:has(input:checked){background:var(--surface);border-color:color-mix(in srgb,var(--fg) 30%,var(--border))}.option-pair input{accent-color:var(--fg);margin:4px 0 0}.option-pair span>small{font-size:10px;display:block;line-height:1.9;margin-top:6px;color:var(--muted)}.setting-inline{margin-top:22px;font-size:11px;display:flex;gap:10px;align-items:center;color:var(--muted)}.setting-inline input{width:68px;padding:8px 10px;font:inherit;border:1px solid var(--border);background:var(--bg);border-radius:4px;color:var(--fg)}.reading-options{display:flex;gap:10px}.reading-options button{border:1px solid var(--border);padding:8px 14px;border-radius:4px;font-size:12px}.reading-options button.active{background:var(--surface);border-color:var(--fg)}.settings-footer{display:flex;justify-content:space-between;align-items:center;gap:20px;border-top:1px solid var(--border);padding:25px 0}.settings-footer p{font-size:11px;color:var(--muted);margin:0}.thread-reading{max-width:780px;margin:auto;padding:45px 35px}.thread-date{font-size:10px;color:var(--muted);text-align:center;padding:0 0 28px}.user-bubble{margin-left:auto;max-width:80%;padding:16px 21px;background:var(--surface);border-radius:7px;font-size:14px;line-height:1.9}.assistant-note{margin:38px 0}.assistant-note>span{font-size:10px;letter-spacing:.14em;color:var(--muted)}.assistant-note p{font-family:var(--font-display);font-size:21px;line-height:1.9;margin:16px 0}.demo-notice{font-size:11px;color:var(--muted);padding-top:15px;border-top:1px solid var(--border);line-height:1.9}.thread-reading .composer{margin-top:45px}.source-block{border-left:2px solid var(--border);padding-left:20px;margin:24px 0;font-size:13px;line-height:1.9;color:var(--muted)}.detail-text{font-family:var(--font-display);font-size:25px;line-height:1.7;margin:20px 0}.detail-status{font-size:10px;border:1px solid var(--border);padding:4px 8px;display:inline-block;border-radius:3px}.detail-section-label{font-size:10px;color:var(--muted);margin-top:28px}.detail-actions{display:flex;gap:10px;border-top:1px solid var(--border);padding-top:25px;margin-top:25px;flex-wrap:wrap}.detail-edit{margin:20px 0}.dialog-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.dialog-heading h2{font-size:29px;line-height:1.4;font-weight:400}.dialog-heading .eyebrow{margin:0 0 16px}.dialog-heading>.icon-button{margin-top:-5px}.dialog-note{font-size:12px;line-height:1.9;color:var(--muted);margin:19px 0 27px}dialog{border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);padding:36px;width:min(590px,calc(100% - 32px));max-height:90dvh;overflow:auto}dialog::backdrop{background:color-mix(in srgb,var(--fg) 32%,transparent)}.role-option{display:flex;align-items:center;gap:16px;text-align:left;width:100%;padding:19px 0;border-top:1px solid var(--border)}.role-option>div{flex:1;min-width:0}.role-option b{font-family:var(--font-display);font-size:24px;font-weight:400;display:block}.role-option p{font-size:11px;line-height:1.9;color:var(--muted);margin:6px 0 0}.role-option>svg{width:17px;color:var(--muted)}.role-option.is-current .role-letter{border-color:var(--fg)}.create-link{width:100%;display:flex;justify-content:center;gap:8px;border:1px dashed var(--border);font-size:12px;padding:15px;margin-top:20px}.create-link svg{width:15px;height:15px}.dialog-meta{font-size:10px;color:var(--muted);margin-top:21px;text-align:center}.field{font-size:12px;gap:9px;margin-top:24px}.input,.textarea{background:var(--bg);font-size:13px;border-radius:5px}.textarea{min-height:130px;line-height:1.9}.form-note{display:flex;gap:7px;align-items:flex-start;font-size:10px;color:var(--muted);margin-top:18px;line-height:1.9}.form-note svg{width:13px;height:13px;margin-top:3px}.dialog-actions{border-top:1px solid var(--border);padding-top:24px;margin-top:25px;display:flex;gap:10px;justify-content:flex-end}.error{font-size:12px;color:var(--accent)}#toast{position:fixed;left:50%;bottom:32px;transform:translate(-50%,10px);padding:12px 20px;background:var(--fg);color:var(--bg);font-size:12px;border-radius:5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:calc(100vw - 30px);z-index:50}#toast.show{opacity:1;transform:translate(-50%,0)}.content>section{animation:enter .35s ease both}@keyframes enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.content.is-large{font-size:16px}.content.is-large .log-row h3{font-size:21px}.content.is-large .log-row p{font-size:13px}
+@media(min-width:1600px){.workspace{grid-template-columns:260px 1fr}.rail{padding:42px 25px 25px}.section{padding-left:80px;padding-right:80px}.chat-home{padding-top:110px}.composer{margin-top:48px}}
+@media(max-width:1120px){.hero-split{grid-template-columns:1fr}.margin-note{display:none}.section{padding-left:35px;padding-right:35px}.memory-layout{grid-template-columns:115px 1fr;gap:25px}.memory-menu{padding-right:12px}.portrait{grid-template-columns:1fr}.portrait-margin{display:none}.app-header{padding:0 30px}.app-foot{padding:15px 30px}.page-heading>.meta{display:none}.log-row{grid-template-columns:65px 1fr 60px;gap:13px}}
+@media(max-width:920px){.workspace{grid-template-columns:190px 1fr}.rail{padding:28px 14px 18px}.wordmark{padding:0 7px 30px;gap:10px}.wordmark strong{font-size:25px}.wordmark small{font-size:7px}.navigation button{gap:10px}.navigation button small{display:none}.hero-split,.portrait,.grid-2,.grid-3,.grid-4,.grid-2-1,.grid-1-2{grid-template-columns:1fr}.memory-layout{grid-template-columns:1fr}.memory-menu{flex-direction:row;border-right:0;border-bottom:1px solid var(--border);padding:0 0 14px;flex-wrap:wrap;gap:5px}.memory-menu p{display:none}.memory-menu button{padding:8px 12px}.memory-groups{gap:20px;margin-bottom:22px}.settings-layout{grid-template-columns:1fr;gap:18px}.setting-menu{flex-direction:row}.section{padding:35px 28px}.chat-home{padding-top:58px}.page-heading h1{font-size:33px}.preview-label{display:none}.header-right{gap:10px!important}.recent-entries{gap:22px}.recent-entries strong{font-size:16px}.role-row{gap:17px;grid-template-columns:25px 1fr 65px}.role-scope{gap:9px}.roles-footer{align-items:flex-start;flex-direction:column}.app-foot>span:nth-child(2){display:none}.app-header{height:65px}.app-header>div{gap:10px}}
+@media(max-width:640px){.workspace{display:block;min-height:100dvh;height:100dvh}.rail{position:fixed;inset:0 auto 0 0;width:236px;z-index:20;transform:translateX(-100%);transition:transform .2s;border-right:1px solid var(--border);padding:30px 20px}.workspace.menu-open .rail{transform:translateX(0)}.workspace.menu-open:after{content:'';position:fixed;inset:0 0 0 236px;background:color-mix(in srgb,var(--fg) 22%,transparent);z-index:19}.main-shell{height:100%}.menu-button{display:grid}.app-header{height:61px;padding:0 18px}.app-header>div>span:first-of-type,.app-header .crumb{display:none}.app-header b{font-size:12px}.section{padding:30px 22px}.chat-home{padding-top:44px}.chat-home h1{font-size:35px;line-height:1.42}.chat-home .eyebrow{font-size:9px;margin-bottom:20px}.chat-home .lead{font-size:13px;margin-top:21px}.composer{margin-top:29px;padding:17px 17px 13px}.composer textarea{font-size:13px}.composer-footer small{font-size:9px}.composer-footer small svg{display:none}.chat-hints{gap:7px}.chat-hints button{font-size:10px;margin-right:8px}.recent-block{margin-top:32px}.recent-entries{grid-template-columns:1fr;gap:0}.recent-entries button{padding:15px 0}.recent-entries button:nth-child(n+2){display:none}.app-foot{padding:14px 20px}.page-heading{margin-bottom:25px;align-items:flex-start;flex-direction:column;gap:20px}.page-heading h1{font-size:32px}.page-heading p{font-size:11px}.memory-groups{gap:19px;margin-top:26px}.memory-groups button{font-size:12px;gap:6px}.memory-groups button span{font-size:9px}.memory-layout{gap:22px}.memory-menu{padding-bottom:12px}.memory-menu button{font-size:11px;padding:7px 10px}.portrait-quote{font-size:23px}.reading-heading h2{font-size:24px}.reading-heading .meta{font-size:9px}.log-row{grid-template-columns:1fr 60px;gap:12px;padding:20px 0}.log-row>.meta{grid-column:1/-1;display:flex;gap:10px;align-items:center}.entry-status{margin:0}.log-row h3{font-size:18px}.log-row>.pull{grid-row:2;grid-column:2}.portrait{padding-bottom:23px;gap:20px}.review-note{gap:12px}.review-note span,.review-note button{font-size:10px}.role-row{grid-template-columns:25px 1fr;gap:13px;padding:24px 0}.role-row>button{grid-column:2;justify-content:flex-start;margin-top:3px;padding:0}.role-row h2{font-size:26px}.roles-intro{font-size:12px}.library-search{gap:10px}.document-row{grid-template-columns:27px 1fr 40px;gap:13px;padding:22px 0}.document-row h3{font-size:18px}.document-row>.meta{display:none}.search-field input{font-size:11px}.option-pair{grid-template-columns:1fr}.settings-footer{align-items:flex-start;gap:16px;flex-direction:column}.setting-section h3{font-size:21px}.thread-reading{padding:30px 22px}.user-bubble{max-width:90%;font-size:13px}.assistant-note p{font-size:20px}.dialog-heading h2{font-size:25px}dialog{padding:27px 24px}.role-option b{font-size:22px}.role-option p{font-size:10px}.dialog-actions{flex-wrap:wrap}.dialog-actions .btn{flex:1;justify-content:center}.detail-text{font-size:24px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+</style>
+</head>
+<body>
+<div class="workspace">
+<aside class="rail" aria-label="主要导航">
+ <a class="wordmark" href="#chat" aria-label="知君首页"><span class="seal">知</span><span><strong>知君</strong><small>CONTEXT OF ME</small></span></a>
+ <button class="role-select" data-action="switch"><span class="role-letter">个</span><span><small>此刻的角色</small><b class="role-name">个人</b></span><svg><use href="#chevron"/></svg></button>
+ <button class="new-dialog" data-action="new-chat"><svg><use href="#plus"/></svg><span>开启一段对话</span></button>
+ <nav class="navigation">
+  <button data-view="chat"><svg><use href="#chat"/></svg><span>对话</span><small>01</small></button>
+  <button data-view="memory"><svg><use href="#memory"/></svg><span>记忆</span><small>02</small></button>
+  <button data-view="library"><svg><use href="#book"/></svg><span>知识库</span><small>03</small></button>
+  <button data-view="roles"><svg><use href="#roles"/></svg><span>我的角色</span><small>04</small></button>
+ </nav>
+ <div class="history"><div class="rail-label">最近的相处 <span class="role-name">个人</span></div><div id="history-list"></div></div>
+ <div class="rail-bottom"><button data-view="settings"><svg><use href="#settings"/></svg><span>设置</span></button><div class="account"><span>我</span><div><b>我的私人空间</b><small>始终由你定义自己</small></div></div></div>
+</aside>
+<div class="main-shell">
+ <header class="app-header"><div><button class="icon-button menu-button" aria-label="展开或收起导航" data-action="menu"><svg><use href="#menu"/></svg></button><span>我的知君</span><span class="crumb">/</span><b id="page-name">对话</b></div><div class="header-right"><button class="role-context" data-action="switch"><span class="role-name">个人</span><svg><use href="#chevron"/></svg></button><span class="preview-label">界面预览 · 示例内容</span></div></header>
+ <main id="content" class="content" tabindex="-1"></main>
+ <footer class="app-foot"><span>知己与导师 · 界面预览</span><span>表达有不同的侧面，每一面都属于你。</span><span class="num">ZHIJUN / UI 02</span></footer>
+</div>
+</div>
+<dialog id="role-dialog" aria-labelledby="role-dialog-title"><div class="dialog-heading"><div><span class="eyebrow">YOUR DIFFERENT SIDES</span><h2 id="role-dialog-title">此刻，你想以哪一面相处？</h2></div><button class="icon-button" data-close="role-dialog" aria-label="关闭角色选择"><svg><use href="#close"/></svg></button></div><p class="dialog-note">每个角色都有自己的定位、对话、记忆和资料。</p><div id="role-options"></div><button class="create-link" data-action="create-role"><svg><use href="#plus"/></svg>定义一个新的角色</button><div class="dialog-meta">同一个知君，独立的相处空间。</div></dialog>
+<dialog id="create-dialog" aria-labelledby="create-title"><div class="dialog-heading"><div><span class="eyebrow">A NEW CHAPTER</span><h2 id="create-title">给自己，另一种表达空间。</h2></div><button class="icon-button" data-close="create-dialog" aria-label="关闭创建角色"><svg><use href="#close"/></svg></button></div><form id="role-form"><label class="field">角色名称<input class="input" id="role-input" name="name" required maxlength="24" placeholder="例如：工作、个人、创作者"></label><label class="field">这个角色里的我<textarea class="textarea" name="description" required maxlength="1200" placeholder="在这里，我希望讨论什么？我以怎样的身份表达？"></textarea></label><p class="form-note"><svg><use href="#lock"/></svg>新角色从空白记忆开始，现有内容保留在原角色。</p><p id="role-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" class="btn btn-secondary" data-close="create-dialog">暂不创建</button><button class="btn btn-primary">创建并进入 <span>↗</span></button></div></form></dialog>
+<dialog id="detail-dialog" aria-labelledby="detail-title"><div class="dialog-heading"><div><span class="eyebrow">A TRACE OF UNDERSTANDING</span><h2 id="detail-title">理解的来处</h2></div><button class="icon-button" data-close="detail-dialog" aria-label="关闭详情"><svg><use href="#close"/></svg></button></div><div id="detail-body"></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<svg class="svg-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+ <symbol id="chat" viewBox="0 0 24 24"><path d="M5 17 3 21l6-2a9 9 0 1 0-4-2Z"/><path d="M8 10h8M8 14h5"/></symbol>
+ <symbol id="memory" viewBox="0 0 24 24"><path d="M12 20V5c-4-4-8 0-6 3-4 2-3 7 0 8-1 4 3 6 6 4Zm0 0V5c4-4 8 0 6 3 4 2 3 7 0 8 1 4-3 6-6 4Z"/><path d="M6 8c2 0 3 1 3 3m9 5c-2 0-3-1-3-3"/></symbol>
+ <symbol id="book" viewBox="0 0 24 24"><path d="M12 6c-3-3-7-3-10-2v15c4-1 7-1 10 2 3-3 6-3 10-2V4c-3-1-7-1-10 2Zm0 0v15"/></symbol>
+ <symbol id="roles" viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M2 21v-3a7 7 0 0 1 14 0v3M17 4a3 3 0 0 1 0 6m1 4c3 1 4 3 4 6"/></symbol>
+ <symbol id="settings" viewBox="0 0 24 24"><path d="m8 3-1 3-3 1 1 4-2 2 2 3 4-1 1 4 4 1 2-3 4-1-1-4 2-2-2-3-4 1-1-4Z"/><circle cx="12" cy="12" r="3"/></symbol>
+ <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+ <symbol id="chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+ <symbol id="close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+ <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+ <symbol id="up" viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></symbol>
+ <symbol id="lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4m-4 5v2"/></symbol>
+ <symbol id="file" viewBox="0 0 24 24"><path d="M14 2H5v20h14V7Zm0 0v5h5M8 12h8M8 16h6"/></symbol>
+ <symbol id="search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></symbol>
+ <symbol id="attach" viewBox="0 0 24 24"><path d="m8 15 8-8a3 3 0 0 1 4 4L9 22a5 5 0 0 1-7-7L14 3a4 4 0 0 1 6 6L9 20a2 2 0 0 1-3-3L16 7"/></symbol>
+ <symbol id="menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+ <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+</svg>
+
+<script>
+const $ = s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const icon=name=>`<svg aria-hidden="true"><use href="#${name}"/></svg>`;
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const initialRoles=[
+ {id:'personal',name:'个人',description:'关于生活、感受，以及作为自己的我。',threads:['当我想慢一点的时候','关于最近的一次选择'],memories:[
+ {id:'m1',text:'我希望留一些不被安排的时间，去感受日常。',kind:'生活方式',status:'本人确认',date:'示例 / 10.08',source:'“周末不用都安排好。散散步、做一顿饭，也算过得很好。”',origin:'当我想慢一点的时候',note:'你可以随时修正这条理解。'},
+ {id:'m2',text:'重要的选择，我希望先弄清楚自己真正在意什么。',kind:'判断与选择',status:'本人修正',date:'示例 / 10.07',source:'“我并不是每次都想得很清楚。但重要的事，我想先问问自己在意什么。”',origin:'关于最近的一次选择',note:'这条理解在示例中由本人修正。'},
+ {id:'m3',text:'独处对我而言，可能是一种恢复状态的方式。',kind:'正在形成的理解',status:'待确认',date:'示例 / 10.06',source:'“一个人在家待一会儿，不用解释什么，我就会放松下来。”',origin:'一段安静的时间',note:'这是一条候选理解，等待你判断是否贴近自己。'}],documents:[{name:'一封写给未来自己的信.md',type:'文字笔记',date:'示例资料',text:'这是原型里的示例资料。\n\n希望以后的我，在忙碌之外，也记得给自己留一点空间。\n\n它用来演示资料阅读界面，不代表你的真实资料。'}]},
+ {id:'work',name:'工作',description:'工作中的我。在这里讨论工作、项目、团队与职业相关的事情，表达工作状态下的想法与判断。',threads:[],memories:[],documents:[]}
+];
+let roles=structuredClone(initialRoles),activeId='personal',view='chat',group='self',sub='overview',thread=null,settings={memory:true,mode:'idle',minutes:5,reading:'standard'};
+try{const saved=JSON.parse(localStorage.getItem('zhijun-ui-v2-demo')||'null');if(saved?.roles?.length&&saved.roles.every(r=>typeof r.id==='string'&&typeof r.name==='string'&&Array.isArray(r.memories)&&Array.isArray(r.threads)&&Array.isArray(r.documents))){roles=saved.roles;activeId=roles.some(r=>r.id===saved.activeId)?saved.activeId:'personal';settings={...settings,...saved.settings};}}catch{}
+const current=()=>roles.find(r=>r.id===activeId)||roles[0];
+function save(){current().settings=structuredClone(settings);try{localStorage.setItem('zhijun-ui-v2-demo',JSON.stringify({roles,activeId,settings}));}catch{}}
+let toastTimer;function toast(text){$('#toast').textContent=text;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),3200);}
+const heading=(eyebrow,title,description,extra='')=>`<div class="page-heading"><div><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p>${description}</p></div>${extra}</div>`;
+function syncShell(){const role=current();$$('.role-name').forEach(n=>n.textContent=role.name);$('.role-select .role-letter').textContent=Array.from(role.name)[0];$('#page-name').textContent=({chat:'对话',memory:'记忆',library:'知识库',roles:'我的角色',settings:'设置'})[view];$$('[data-view]').forEach(n=>{n.classList.toggle('active',n.dataset.view===view);if(n.dataset.view===view)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});$('#history-list').innerHTML=role.threads.length?role.threads.map((t,i)=>`<button data-thread="${i}" title="${esc(t)}">${esc(t)}</button>`).join(''):'<p class="history-empty">从这里开始，<br>留下一段新的相处。</p>';$('#content').classList.toggle('is-large',settings.reading==='large');}
+function syncNavigation(){const mobile=matchMedia('(max-width:640px)').matches;$('.rail').inert=mobile&&!$('.workspace').classList.contains('menu-open');}window.addEventListener('resize',syncNavigation);
+function render(){syncShell();syncNavigation();const content=$('#content');content.innerHTML=view==='chat'?chatPage():view==='memory'?memoryPage():view==='library'?libraryPage():view==='roles'?rolesPage():settingsPage();content.scrollTop=0;}
+function go(next){view=next;$('.workspace').classList.remove('menu-open');render();history.replaceState(null,'','#'+next);}
+function selectRole(id){if(!roles.some(r=>r.id===id))return;current().settings=structuredClone(settings);activeId=id;settings={memory:true,mode:'idle',minutes:5,reading:'standard',...current().settings};thread=null;group='self';sub='overview';save();closeDialog('role-dialog');go('chat');toast(`已进入「${current().name}」的独立空间`);}
+function composer(){return `<form class="composer" id="chat-form"><textarea id="message-input" aria-label="对话内容" placeholder="有些话，想和你说说…" rows="2" maxlength="4000"></textarea><div class="composer-footer"><small>${icon('lock')}仅在「${esc(current().name)}」这个角色里相处</small><div><button type="button" class="icon-button" data-action="attach-chat" aria-label="添加本次参考附件">${icon('attach')}</button><button class="send" aria-label="发送演示对话">${icon('up')}</button></div></div></form>`;}
+function chatPage(){const role=current();if(thread)return `<section class="section thread-reading" data-od-id="conversation"><div class="thread-date">${esc(role.name)} · 一段相处 / 示例演示</div><div class="user-bubble">${esc(thread)}</div><div class="assistant-note"><span>知君 / CONTEXT OF ME</span><p>我们可以慢慢说。<br>此刻，最让你想停下来想一想的是什么？</p><div class="demo-notice">这是界面中的演示回复。原型没有连接模型，所输入的内容不会发送到后台。</div></div>${composer()}</section>`;
+return `<section class="section chat-home" data-od-id="chat-home"><div class="container"><div class="hero-split"><div><p class="eyebrow">A PLACE TO BE YOURSELF</p><h1>${role.id==='personal'?'见字如面。':`在「${esc(role.name)}」里。`}<br>今天，想从哪里说起？</h1><p class="lead">${role.id==='personal'?'那些还没理清的念头，值得被听见。<br>不必组织好语言，我们慢慢聊。':esc(role.description)}</p></div><aside class="margin-note"><div class="paper-mark" aria-hidden="true"><span>知</span></div><span>每一面，都属于你。</span><p>在不同的角色里，<br>表达可以有所不同。<br>每个空间，留下自己的记忆。</p><a href="#roles" data-view="roles">看看我的角色</a></aside></div>${composer()}<div class="chat-hints"><button data-prompt="最近，我在想一件事情。">最近在想的事 ↗</button><button data-prompt="今天有一点说不清的感受。">此刻的感受 ↗</button><button data-prompt="有一个选择，我想慢慢理清楚。">想理清的选择 ↗</button></div><div class="recent-block"><div class="section-cap"><span>留在「${esc(role.name)}」里的相处</span><span>示例预览</span></div><div class="recent-entries">${role.threads.length?role.threads.slice(0,2).map((t,i)=>`<button data-thread="${i}"><span>一段相处 / ${String(i+1).padStart(2,'0')}</span><strong>${esc(t)}</strong><p>回到那段对话，继续理解当时的自己。</p></button>`).join(''):`<div class="card-rule"><h3>这个空间，还没有故事。</h3><p class="reading-subtitle">从今天的一句话开始，慢慢留下属于这个角色的线索。</p></div>`}</div></div></div></section>`;}
+const groups={self:{name:'认识自己',items:[['overview','概览'],['profile','用户画像'],['tree','记忆树']]},past:{name:'回看来处',items:[['diary','情绪日记'],['review','记忆沉淀'],['conversations','对话记录']]},care:{name:'相处方式',items:[['journal','整理记录'],['proactive','主动关心'],['memory-settings','记忆设置']]}};
+function memoryRows(items){return `<div class="entry-list">${items.map(m=>`<article class="log-row"><div class="meta">${esc(m.kind)}<span class="entry-status">${esc(m.status)}</span></div><div><h3>${esc(m.text)}</h3><p>来自「${esc(m.origin)}」 · ${esc(m.date)}</p></div><button class="pull" data-memory="${esc(m.id)}">查看来处 ↗</button></article>`).join('')}</div>`;}
+function memoryPage(){return `<section class="section" data-od-id="memory"><div class="container">${heading('THE THREADS OF YOU','那些被记住的你。','回看来处，修正理解。如何定义自己，始终由你决定。',`<div class="meta">${esc(current().name)}的记忆<br>每条理解，都有来处。</div>`)}<div class="memory-groups" role="tablist" aria-label="记忆分组">${Object.entries(groups).map(([id,g],i)=>`<button role="tab" aria-selected="${group===id}" class="${group===id?'active':''}" data-group="${id}"><span>0${i+1}</span>${g.name}</button>`).join('')}</div><div class="memory-layout"><nav class="memory-menu" aria-label="${groups[group].name}目录">${groups[group].items.map(([id,name])=>`<button data-sub="${id}" class="${sub===id?'active':''}" ${sub===id?'aria-current="page"':''}>${name}</button>`).join('')}<p>理解会随你变化。<br>你可以确认，也可以修正。</p></nav><div id="memory-reading">${memoryContent()}</div></div></div></section>`;}
+function memoryContent(){const r=current(),mem=r.memories;if(sub==='memory-settings')return memorySettings();if(sub==='proactive')return `<div class="reading-heading"><h2>以你舒服的方式相处。</h2></div><p class="reading-subtitle">主动关心的时间与频率，由你决定。</p><div class="setting-section"><div class="setting-heading"><div><h3>允许主动关心</h3><p>在合适的时刻，轻轻问候，而不是催促。</p></div><label class="switch">开启<input type="checkbox" aria-label="允许主动关心"></label></div></div><div class="setting-section"><h3>安静时段</h3><p>这段时间，知君不主动打扰。</p><div class="setting-inline"><input type="time" value="22:00" aria-label="安静时段开始">至<input type="time" value="08:00" aria-label="安静时段结束"></div></div><button class="btn btn-primary" data-action="save-settings">保存相处方式</button>`;
+if(!mem.length&&sub!=='conversations')return empty('每一页，从相处开始。','这里是这个角色独立的记忆空间。对话慢慢积累后，再回来看知君的理解。','开始一段对话','new-chat');
+if(sub==='overview'||sub==='profile')return `<div class="reading-heading"><h2>${sub==='overview'?'关于你的几条线索。':'一幅可以修改的自画像。'}</h2><span class="meta">示例理解</span></div><p class="reading-subtitle">留下贴近自己的理解，把不准确的地方慢慢改正。</p><div class="portrait"><div><p class="portrait-quote">“我想认真地做选择，<br>也想给生活留一点余地。”</p><p class="portrait-copy">这句话来自本页的示例记忆。知君的理解应当有来源，<br>也始终为你的变化留出空间。</p><div class="memory-tags"><span class="tag">生活的节奏</span><span class="tag">判断与选择</span><span class="tag">与自己相处</span></div></div><aside class="portrait-margin"><b>理解，不是定论。</b>本人确认与候选理解<br>分别保留。<br>修正后仍可以回看来源。<a href="#" data-sub="tree">沿着记忆，看看来处 ↗</a></aside></div><div class="review-note"><span><b>还有理解，等你看看。</b><br>只有你知道，它是否真的贴近自己。</span><button data-sub="review">去确认 ${icon('arrow')}</button></div>${memoryRows(mem.filter(m=>m.status!=='待确认'))}<div class="summary-footer"><span>示例内容 · 不代表你的真实画像</span><button data-sub="tree">查看记忆树 ↗</button></div>`;
+if(sub==='tree')return `<div class="reading-heading"><h2>顺着线索，看看自己。</h2></div><p class="reading-subtitle">按主题阅读记忆，每条理解都保留对话来源。</p>${memoryRows(mem)}`;
+if(sub==='review'){const pending=mem.filter(m=>m.status==='待确认');return `<div class="reading-heading"><h2>这些理解，贴近你吗？</h2></div><p class="reading-subtitle">候选理解等待你的判断。确认之前，仍标注为“待确认”。</p>${pending.length?memoryRows(pending):empty('这一页，已经看过了。','当前原型没有等待确认的理解。','查看已有记忆','memory-tree')}`;}
+if(sub==='conversations')return `<div class="reading-heading"><h2>回到那时的对话。</h2></div><p class="reading-subtitle">只展示当前「${esc(r.name)}」角色里的相处。</p>${r.threads.length?r.threads.map((t,i)=>`<article class="log-row"><span class="meta">一段相处</span><div><h3>${esc(t)}</h3><p>保留说过的话，让理解可以回到原文。</p></div><button class="pull" data-thread="${i}">回看 ↗</button></article>`).join(''):empty('还没有对话。','这个角色的相处，从下一句话开始。','开始对话','new-chat')}`;
+if(sub==='diary')return `<div class="reading-heading"><h2>感受，也值得被记下。</h2></div><p class="reading-subtitle">情绪的来处与当时的表达放在一起，保留你自己的说法。</p><article class="log-row"><span class="meta">示例日记<br>一个周末</span><div><h3>不必把每个空隙都填满。</h3><p>“慢慢做了一顿饭，才发现今天其实很安静。”</p></div><button class="pull" data-memory="m1">查看来源 ↗</button></article>`;
+return `<div class="reading-heading"><h2>理解如何，一点点留下。</h2></div><p class="reading-subtitle">回看每次整理的来处与状态。</p><article class="log-row"><span class="meta">示例记录</span><div><h3>从一段对话，到一条理解。</h3><p>整理完成 · 候选理解仍等待本人确认</p></div><button class="pull" data-sub="review">看看理解 ↗</button></article>`;
+}
+function empty(title,desc,cta,action){return `<div class="empty-state"><span class="role-letter">${esc(Array.from(current().name)[0])}</span><h2>${title}</h2><p>${desc}</p><button class="btn btn-secondary" data-action="${action}">${cta} ${icon('arrow')}</button></div>`;}
+function libraryPage(){const r=current();return `<section class="section" data-od-id="library"><div class="container">${heading('YOUR LIBRARY','把值得留下的，放在这里。','你的文档、笔记与资料，也是知君理解你的线索。',`<button class="btn btn-primary" data-action="upload">${icon('plus')}添加资料</button>`)}<div class="library-search"><div class="search-field">${icon('search')}<input aria-label="搜索资料" id="library-search" placeholder="在「${esc(r.name)}」的资料里寻找…"></div><span class="meta" style="font-size:10px">${esc(r.name)}的知识库</span></div><div id="documents">${documentRows(r.documents)}</div><p class="quiet-note">${icon('lock')}这里的资料只属于「${esc(r.name)}」角色。添加新角色，不会复制已有资料。</p><input type="file" id="upload-input" multiple hidden></div></section>`;}
+function documentRows(docs){return docs.length?docs.map((d)=>`<article class="document-row">${icon('file')}<div><h3>${esc(d.name)}</h3><p>${esc(d.type)} · 当前角色的参考资料</p></div><span class="meta">${esc(d.date)}</span><button data-document="${esc(d.name)}">阅读 ↗</button></article>`).join(''):empty('从一份熟悉的资料开始。','上传后，在这里查看阅读与整理状态。原型仅演示文件名称，不上传文件。','添加资料','upload');}
+function rolesPage(){return `<section class="section" data-od-id="roles"><div class="container">${heading('THE DIFFERENT SIDES OF YOU','在不同的角色里，做自己。','工作时的判断，生活里的感受，都可以有各自的表达空间。')}<p class="roles-intro">每个角色沿用同一套知君能力，拥有独立的定位、对话、记忆与资料。<br>它们都是你的侧面，由你来定义如何相处。</p>${roles.map((r,i)=>`<article class="role-row"><span class="num">${String(i+1).padStart(2,'0')}</span><div><h2>${esc(r.name)}${r.id===activeId?'<small>当前角色</small>':''}</h2><p>${esc(r.description)}</p><div class="role-scope"><span>独立对话</span><span>独立记忆</span><span>独立资料</span></div></div><button data-role="${esc(r.id)}">${r.id===activeId?'回到相处':'进入角色'}${icon('arrow')}</button></article>`).join('')}<div class="roles-footer"><p>新的角色，从空白开始。<br>已有的故事，留在原来的空间里。</p><button class="btn btn-primary" data-action="create-role">${icon('plus')}定义新的角色</button></div></div></section>`;}
+function memorySettings(){return `<div class="reading-heading"><h2>让记忆，以合适的节奏留下。</h2></div><p class="reading-subtitle">这些设置只用于当前「${esc(current().name)}」的记忆空间。</p><div class="setting-section"><div class="setting-heading"><div><h3>存储记忆</h3><p>允许知君使用已有记忆，并从对话中积累新的理解。</p></div><label class="switch">${settings.memory?'已开启':'已关闭'}<input id="memory-enabled" type="checkbox" aria-label="存储记忆" ${settings.memory?'checked':''}></label></div></div><div class="setting-section"><h3>何时整理对话</h3><p>给表达留出完整的时间，再整理其中的线索。</p><div class="option-pair"><label><input name="extract-mode" type="radio" value="idle" ${settings.mode==='idle'?'checked':''}><span>对话空闲后整理<small>让一段相处先说完，再沉淀理解。</small></span></label><label><input name="extract-mode" type="radio" value="interval" ${settings.mode==='interval'?'checked':''}><span>按固定间隔整理<small>按你设定的频率，定期回顾。</small></span></label></div><label class="setting-inline">等待<input type="number" min="1" max="120" id="idle-minutes" aria-label="等待分钟数" value="${Number(settings.minutes)||5}">分钟后整理</label></div><div class="settings-footer"><p>界面演示设置，不会修改真实记忆服务。</p><button class="btn btn-primary" data-action="save-settings">保存设置</button></div>`;}
+function settingsPage(){return `<section class="section" data-od-id="settings"><div class="container">${heading('AT YOUR OWN PACE','以你舒服的方式相处。','记忆的节奏、阅读的字号，由你决定。')}<div class="settings-layout"><nav class="memory-menu setting-menu" aria-label="设置目录"><button class="active">相处与阅读</button><button data-action="open-memory-settings">记忆设置</button><button data-view="roles">角色定位</button></nav><div><div class="setting-section"><h3>阅读字号</h3><p>让长一些的理解，也能读得从容。</p><div class="reading-options"><button data-reading="standard" class="${settings.reading==='standard'?'active':''}">标准字号</button><button data-reading="large" class="${settings.reading==='large'?'active':''}">大一点</button></div><p style="margin:24px 0 0;font-family:var(--font-display);font-size:${settings.reading==='large'?22:18}px">“如何定义自己，始终由你决定。”</p></div>${memorySettings()}</div></div></div></section>`;}
+function openDialog(id){const el=$('#'+id);if(!el.open){el._opener=document.activeElement;el.showModal();}}
+function closeDialog(id){const el=$('#'+id);if(el.open){el.close();el._opener?.focus();}}
+function roleDialog(){const role=current();$('#role-options').innerHTML=roles.map(r=>`<button class="role-option ${r.id===role.id?'is-current':''}" data-role="${esc(r.id)}"><span class="role-letter">${esc(Array.from(r.name)[0])}</span><div><b>${esc(r.name)}</b><p>${esc(r.description)}</p></div>${icon(r.id===role.id?'check':'arrow')}</button>`).join('');openDialog('role-dialog');}
+function memoryDetail(id){const m=current().memories.find(m=>m.id===id);if(!m)return;$('#detail-title').textContent='理解的来处';$('#detail-body').innerHTML=`<span class="detail-status">${esc(m.status)}</span><p class="detail-text">${esc(m.text)}</p><div class="detail-section-label">原句 · ${esc(m.origin)} / 示例</div><blockquote class="source-block">${esc(m.source)}</blockquote><p class="reading-subtitle">${esc(m.note)}</p><div class="detail-edit" hidden><label class="field">写成更贴近你的说法<textarea class="textarea" id="memory-edit">${esc(m.text)}</textarea></label><button class="btn btn-secondary" data-save-memory="${esc(m.id)}" style="margin-top:15px">保存修正</button></div><div class="detail-actions">${m.status==='待确认'?`<button class="btn btn-primary" data-confirm-memory="${esc(m.id)}">这贴近我，确认</button>`:''}<button class="btn btn-secondary" data-action="edit-memory">修正这条理解</button><button class="btn btn-ghost" data-close="detail-dialog">先放在这里</button></div><div class="dialog-meta">示例中的操作只改变本原型，不改动你的真实记忆。</div>`;openDialog('detail-dialog');}
+function documentDetail(name){const d=current().documents.find(d=>d.name===name);if(!d)return;$('#detail-title').textContent=d.name;$('#detail-body').innerHTML=`<div class="detail-section-label">${esc(d.type)} · ${esc(current().name)}的资料</div><p class="source-block" style="white-space:pre-wrap;border:0;padding-left:0">${esc(d.text)}</p><div class="dialog-meta">资料阅读界面预览</div>`;openDialog('detail-dialog');}
+document.addEventListener('click',e=>{if(!(e.target instanceof Element))return;if(e.target.matches('.workspace.menu-open')&&e.clientX>236){$('.workspace').classList.remove('menu-open');syncNavigation();return;}const b=e.target.closest('button,a');if(!b)return;
+ if(b.dataset.view){e.preventDefault();go(b.dataset.view);return;}
+ if(b.dataset.close){closeDialog(b.dataset.close);return;}
+ if(b.dataset.role){selectRole(b.dataset.role);return;}
+ if(b.dataset.group){group=b.dataset.group;sub=groups[group].items[0][0];render();return;}
+ if(b.dataset.sub){e.preventDefault();sub=b.dataset.sub;group=Object.keys(groups).find(id=>groups[id].items.some(([key])=>key===sub))||group;render();return;}
+ if(b.dataset.memory){memoryDetail(b.dataset.memory);return;}
+ if(b.dataset.document){documentDetail(b.dataset.document);return;}
+ if(b.dataset.thread!==undefined){thread=current().threads[Number(b.dataset.thread)];go('chat');return;}
+ if(b.dataset.prompt){$('#message-input').value=b.dataset.prompt;$('#message-input').focus();return;}
+ if(b.dataset.confirmMemory){const m=current().memories.find(m=>m.id===b.dataset.confirmMemory);if(m){m.status='本人确认';m.note='这条示例理解已由你在原型中确认。';save();closeDialog('detail-dialog');render();toast('已确认这条示例理解');}return;}
+ if(b.dataset.saveMemory){const m=current().memories.find(m=>m.id===b.dataset.saveMemory);const text=$('#memory-edit').value.trim();if(m&&text){m.text=text;m.status='本人修正';m.note='修正保留原句来源，方便回看。';save();closeDialog('detail-dialog');render();toast('已保存示例修正，原句来源仍保留');}return;}
+ if(b.dataset.reading){settings.reading=b.dataset.reading;save();render();return;}
+ switch(b.dataset.action){case 'switch':roleDialog();break;case 'menu':$('.workspace').classList.toggle('menu-open');syncNavigation();break;case 'create-role':closeDialog('role-dialog');$('#role-form').reset();$('#role-error').textContent='';openDialog('create-dialog');break;case 'new-chat':thread=null;go('chat');$('#message-input').focus();break;case 'memory-tree':group='self';sub='tree';render();break;case 'edit-memory':$('.detail-edit').hidden=false;$('#memory-edit').focus();break;case 'upload':$('#upload-input').click();break;case 'attach-chat':toast('附件入口预览：正式版可添加本次参考资料。');break;case 'open-memory-settings':group='care';sub='memory-settings';go('memory');break;case 'save-settings':settings.memory=$('#memory-enabled')?.checked??settings.memory;settings.mode=$('input[name="extract-mode"]:checked')?.value||settings.mode;settings.minutes=Math.max(1,Math.min(120,Number($('#idle-minutes')?.value)||5));save();toast('预览设置已保存，不影响正在使用的知君。');break;}
+});
+document.addEventListener('submit',e=>{if(e.target.id==='role-form'){e.preventDefault();const form=new FormData(e.target),name=String(form.get('name')).trim(),description=String(form.get('description')).trim();if(!name||!description)return;if(roles.some(r=>r.name===name)){$('#role-error').textContent='已有同名角色，请给它一个不同的名称。';return;}const id=crypto.randomUUID();roles.push({id,name,description,threads:[],memories:[],documents:[]});closeDialog('create-dialog');selectRole(id);toast(`「${name}」已在原型中创建，记忆从空白开始。`);}if(e.target.id==='chat-form'){e.preventDefault();const input=$('#message-input'),text=input.value.trim();if(!text){input.focus();return;}thread=text;const title=Array.from(text).slice(0,25).join('');current().threads.unshift(title);go('chat');/* Sending stays in memory until another demo preference is saved. */}});
+document.addEventListener('input',e=>{if(e.target.id==='library-search'){const q=e.target.value.toLowerCase();const matches=current().documents.filter(d=>d.name.toLowerCase().includes(q));$('#documents').innerHTML=matches.length||!q?documentRows(matches):'<p class="reading-subtitle" style="padding:30px 0">没有匹配的资料，试试换一个词。</p>';}});
+document.addEventListener('change',e=>{if(e.target.id==='upload-input'){const files=[...e.target.files];for(const file of files)current().documents.push({name:file.name,type:'本地文件名演示',date:'待接入服务',text:'此原型只记录了文件名称，未读取或上传文件内容。正式版将展示资料正文与处理状态。'});save();render();toast('已展示文件名。文件内容没有读取或上传。');}});
+document.addEventListener('keydown',e=>{if(e.target.id==='message-input'&&e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();$('#chat-form').requestSubmit();}if(e.target.getAttribute?.('role')==='tab'&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const keys=Object.keys(groups),i=keys.indexOf(group);group=keys[e.key==='Home'?0:e.key==='End'?keys.length-1:(i+(e.key==='ArrowRight'?1:-1)+keys.length)%keys.length];sub=groups[group].items[0][0];render();$(`[data-group="${group}"]`).focus();}if(e.key==='Escape'){$('.workspace').classList.remove('menu-open');syncNavigation();}});
+$$('dialog').forEach(d=>{d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialog(d.id);}});d.addEventListener('cancel',()=>d._opener?.focus());});
+window.addEventListener('hashchange',()=>{const next=location.hash.slice(1);if(['chat','memory','library','roles','settings'].includes(next)){view=next;render();}});
+view=['chat','memory','library','roles','settings'].includes(location.hash.slice(1))?location.hash.slice(1):'chat';render();
+
+</script>
+</body>
+</html>

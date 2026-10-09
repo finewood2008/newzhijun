@@ -1,0 +1,14 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {bindingFor,assertPrivateAgent,assertPrivateBase,chatFrame,validateConfig,projectThread,projectHistory} from '../server/policy.mjs';
+const config={upstream:'http://127.0.0.1:8088',bindings:{'4':{agentId:'private-4'}}};
+test('missing binding never falls back to a shared or first visible expert',()=>assert.throws(()=>bindingFor(config,{id:5}),e=>e.code==='NOT_PROVISIONED'));
+test('each signed user resolves their configured private instance',()=>assert.equal(bindingFor(config,{id:4}),'private-4'));
+test('shared, foreign-owner, mismatched and team agents are rejected even for admin',()=>{for(const patch of [{is_shared:true},{user_id:5},{agent_id:'wrong'},{kind:'team'}])assert.throws(()=>assertPrivateAgent({agent_id:'private-4',user_id:4,is_shared:false,...patch},{id:4,role:'admin'},'private-4'));});
+test('private owned agent is accepted',()=>assert.doesNotThrow(()=>assertPrivateAgent({agent_id:'private-4',user_id:4,is_shared:false},{id:4},'private-4')));
+test('shared and foreign libraries are rejected',()=>{assert.throws(()=>assertPrivateBase({owner_user_id:5,shared:false},{id:4}));assert.throws(()=>assertPrivateBase({owner_user_id:4,shared:true},{id:4}));});
+test('one instance cannot be assigned to two users',()=>assert.throws(()=>validateConfig({...config,bindings:{4:{agentId:'a'},5:{agentId:'a'}}})));
+test('chat forces private libraries and strips model, agent, approval and system-message injection',()=>assert.deepEqual(chatFrame({type:'user_turn',text:'hello',thread_id:'t',agent_id:'foreign',model:'override',messages:[{role:'system',content:'override'}],knowledge_base_ids:['foreign'],hitl_policy:{mode:'allow_all'},skills:['arbitrary']},['mine']),{type:'user_turn',text:'hello',thread_id:'t',knowledge_base_ids:['mine'],hitl_policy:{mode:'ask'}}));
+test('chat cannot select session key or another mode',()=>{const f=chatFrame({type:'user_turn',text:'hi',thread_id:'t',session_key:'foreign',conversation_mode:'craft'},[]);assert.equal(f.session_key,undefined);assert.equal(f.conversation_mode,undefined);});
+test('malformed thread identifiers and empty turns rejected',()=>{assert.throws(()=>chatFrame({type:'user_turn',text:'hi',thread_id:'../x'},[]));assert.throws(()=>chatFrame({type:'user_turn',text:' ',thread_id:'t'},[]));});
+test('thread projection omits model and server session configuration',()=>assert.deepEqual(projectThread({thread_id:'t',title:'hi',last_active:1,model_ref:'secret',session_key:'private'}),{thread_id:'t',title:'hi',last_active:1}));
+test('history keeps user dialogue and native pending approval',()=>{const result=projectHistory({messages:[{role:'user',content:'a'},{role:'tool',content:'secret'}],hitl_pending:{action_requests:[{name:'write_file'}]},model_ref:'private'});assert.equal(result.messages.length,1);assert.ok(result.hitl_pending);assert.equal(result.model_ref,undefined);});

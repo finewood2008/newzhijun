@@ -1,0 +1,81 @@
+{
+  "name": "zhijun-desktop",
+  "productName": "知君",
+  "version": "0.4.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "知君私人空间桌面客户端",
+  "author": "CentaurAI",
+  "main": "shell/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "package:win": "electron-builder --win nsis --x64",
+    "test": "node --test tests/*.test.cjs"
+  },
+  "dependencies": {
+    "bonjour-service": "1.4.4",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "ai.centaur.zhijun.lan",
+    "productName": "知君",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "shell/**",
+      "renderer/**",
+      "resources/server-profile.json",
+      "package.json",
+      "THIRD_PARTY_NOTICES.md",
+      "resources/icon.*"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false,
+      "artifactName": "Zhijun-Setup-${version}-${arch}.${ext}",
+      "icon": "resources/icon.ico",
+      "extraResources": [
+        {
+          "from": "../remote-connect/bin/wanx-link-win32-amd64.exe",
+          "to": "bin/wanx-link-win32-amd64.exe"
+        },
+        {
+          "from": "../remote-connect/THIRD_PARTY_NOTICES.md",
+          "to": "remote-connect/THIRD_PARTY_NOTICES.md"
+        },
+        {
+          "from": "../remote-connect/licenses",
+          "to": "remote-connect/licenses"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "知君",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "installerLanguages": [
+        "zh_CN",
+        "en_US"
+      ]
+    },
+    "afterPack": "tools/brand-win.cjs"
+  }
+}

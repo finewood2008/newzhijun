@@ -1,0 +1,10 @@
+import {useEffect} from 'react';
+import {App as AntApp,ConfigProvider} from 'antd';import zhCN from 'antd/locale/zh_CN';import {I18nextProvider} from 'react-i18next';
+import dayjs from 'dayjs';import customParseFormat from 'dayjs/plugin/customParseFormat';import 'dayjs/locale/zh-cn';
+import i18n from './native/i18n';import MemoryPanel from './native/pages/Agent/Memory/MemoryPanel';
+import MemorySettings from './native/pages/Agent/Memory/MemorySettings';
+import {bindAntdMessage,unbindAntdMessage} from './native/utils/antdMessage';import {bindAntdModal,unbindAntdModal} from './native/utils/antdModal';
+import './memory-theme.css';
+dayjs.extend(customParseFormat);dayjs.locale('zh-cn');
+function BindFeedback(){const {message,modal}=AntApp.useApp();useEffect(()=>{bindAntdMessage(message);bindAntdModal(modal);return()=>{unbindAntdMessage();unbindAntdModal()}},[message,modal]);return null;}
+export function Memory({settingsOnly=false}:{settingsOnly?:boolean}){return <I18nextProvider i18n={i18n}><ConfigProvider locale={zhCN} theme={{token:{colorPrimary:'#a6452e',colorBgBase:'#fffcf6',colorBgContainer:'#fffdf8',colorBgElevated:'#fffdf8',colorFillAlter:'#f5f0e7',colorText:'#3c403d',colorTextSecondary:'#777568',colorBorder:'#ded6c9',colorBorderSecondary:'#e9e2d7',colorSuccess:'#718363',colorInfo:'#8b7862',colorInfoBg:'#f5f0e7',colorInfoBorder:'#e2d8c8',colorWarning:'#a17b3e',fontFamily:'-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif',borderRadius:8,controlHeight:36,fontSize:13},components:{Card:{headerFontSize:15,headerBg:"transparent",boxShadow:"none"},Table:{headerBg:"#f5f0e7",rowHoverBg:"#f8f3ea"},Button:{primaryShadow:"none"},Segmented:{trackBg:"#f2ecdf",itemSelectedBg:"#fffdf8"}}}}><AntApp className="zhijun-memory"><BindFeedback/>{settingsOnly?<MemorySettings agentId="me" hideHeader/>:<><header className="memory-heading"><div><span className="eyebrow">THE THREADS OF YOU</span><h1>那些被记住的你。</h1><p>回看来处，修正理解。如何定义自己，始终由你决定。</p></div><span className="memory-heading-note">一页一页，慢慢了解自己。</span></header><div className="memory-body"><MemoryPanel agentId="me"/></div></>}</AntApp></ConfigProvider></I18nextProvider>;}

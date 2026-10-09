@@ -1,0 +1,15 @@
+import test from 'node:test';import assert from 'node:assert/strict';import http from 'node:http';import {once} from 'node:events';import {WebSocket,WebSocketServer} from 'ws';import {createApp} from '../server/app.mjs';
+test('native WebSocket streams tokens and scopes the turn without exposing JWT to the browser',{timeout:10000},async t=>{
+ const native=http.createServer(),wss=new WebSocketServer({server:native});native.listen(0,'127.0.0.1');await once(native,'listening');let received;
+ wss.on('connection',(ws,req)=>{assert.equal(new URL(req.url,'http://localhost').searchParams.get('token'),'upstream-only');ws.on('message',raw=>{received=JSON.parse(raw);ws.send(JSON.stringify({type:'token',thread_id:'t1',content:'你好'}));ws.send(JSON.stringify({type:'done',thread_id:'t1'}));});});
+ const c={upstream:`http://127.0.0.1:${native.address().port}`,publicOrigin:'http://127.0.0.1:0',bindings:{4:{agentId:'a4'}}};
+ const fetcher=async(url)=>{const p=new URL(url).pathname;return new Response(JSON.stringify(p.endsWith('/login')?{access_token:'upstream-only',expires_in:3600,user:{id:4}}:p.endsWith('/me')?{id:4}:p.endsWith('/a4')?{agent_id:'a4',user_id:4,is_shared:false}:p.endsWith('/knowledge-bases')?[{id:'mine',owner_user_id:4,shared:false,default_open:true},{id:'theirs',owner_user_id:5,shared:true,default_open:true},{id:'off',owner_user_id:4,shared:false,default_open:false}]:{}),{headers:{'Content-Type':'application/json'}});};
+ const app=createApp(c,{fetcher});app.listen(0,'127.0.0.1');await once(app,'listening');c.publicOrigin=`http://127.0.0.1:${app.address().port}`;
+ let client;t.after(async()=>{client?.terminate();for(const ws of wss.clients)ws.terminate();wss.close();app.closeAllConnections();await Promise.all([new Promise(r=>app.close(r)),new Promise(r=>native.close(r))]);});
+ const login=await fetch(c.publicOrigin+'/api/login',{method:'POST',headers:{Origin:c.publicOrigin,'Content-Type':'application/json'},body:JSON.stringify({username:'test',password:'test'})});const cookie=login.headers.get('set-cookie').split(';')[0];
+ assert.equal((await login.text()).includes('upstream-only'),false);
+ client=new WebSocket(c.publicOrigin.replace('http:','ws:')+'/api/chat',{headers:{Origin:c.publicOrigin,Cookie:cookie}});
+ const frames=[];const done=new Promise((resolve,reject)=>{client.on('error',reject);client.on('message',raw=>{const f=JSON.parse(raw);frames.push(f);if(f.type==='ready')client.send(JSON.stringify({type:'user_turn',thread_id:'t1',text:'hello',model:'unwanted',knowledge_base_ids:['theirs']}));if(f.type==='done')resolve();});});
+ await done;assert.equal(received.type,'user_turn');assert.deepEqual(received.knowledge_base_ids,['mine']);assert.equal(received.model,undefined);assert.deepEqual(received.hitl_policy,{mode:'ask'});assert.equal(frames[1].content,'你好');
+ const closed=once(client,'close');await fetch(c.publicOrigin+'/api/logout',{method:'POST',headers:{Origin:c.publicOrigin,Cookie:cookie,'Content-Type':'application/json'},body:'{}'});await closed;
+});

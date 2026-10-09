@@ -1,0 +1,354 @@
+<!doctype html>
+<!--
+  OD web-prototype seed.
+
+  Copy this file to <project>/index.html, then fill `<main id="content">` by
+  pasting blocks from `references/layouts.md`. Every class referenced in
+  layouts.md is defined here — DO NOT remove unused ones unless you also
+  remove their callers, and DO NOT invent new global classes (use inline
+  style="…" for one-off tweaks).
+
+  Theme tokens at the top of `<style>` are the *only* place to set palette
+  and type. They map cleanly onto a DESIGN.md — when an active design system
+  is injected, swap these six variables and everything reflows.
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>知君 · 本体雷达交互设计</title>
+  <style>
+    /* ─── tokens ─────────────────────────────────────────────────────────
+       Six variables. Bind them to the active DESIGN.md and stop.
+       Do not introduce raw hex anywhere else in this file. */
+    :root {
+      --bg:      #fffcf6;   /* page background — never #fff */
+      --surface: #fffdf9;   /* cards, modals, raised areas */
+      --fg:      #3c403d;   /* primary text — never #000 */
+      --muted:   #817d70;   /* secondary text, captions */
+      --border:  #e2ded4;   /* hairlines, dividers */
+      --accent:  #a6452e;   /* one accent — used at most 2× per screen */
+
+      /* derived — do not change */
+      --accent-soft: color-mix(in oklch, var(--accent) 14%, transparent);
+      --fg-soft:     color-mix(in oklch, var(--fg) 6%, transparent);
+
+      /* type — display = serif (default), body = sans, mono for numerics */
+      --font-display: "Songti SC", "Noto Serif SC", STSong, serif;
+      --font-body:    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-mono:    ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+      /* scale — clamp() so it works at 1280, 1440, 1920 without media queries */
+      --fs-h1: clamp(44px, 6vw, 76px);
+      --fs-h2: clamp(32px, 4vw, 48px);
+      --fs-h3: 22px;
+      --fs-lead: 19px;
+      --fs-body: 16px;
+      --fs-meta: 13px;
+
+      /* spacing — 8-point grid */
+      --gap-xs: 8px;
+      --gap-sm: 12px;
+      --gap-md: 20px;
+      --gap-lg: 32px;
+      --gap-xl: 56px;
+      --gap-2xl: 96px;
+      --container: 1120px;
+      --gutter: 32px;
+
+      --radius: 10px;
+      --radius-lg: 16px;
+    }
+
+    /* ─── reset & base ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: var(--fs-body);
+      line-height: 1.55;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+    img, svg { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; }
+    p { text-wrap: pretty; }
+    h1, h2, h3, h4 { text-wrap: balance; }
+
+    /* ─── layout primitives ─────────────────────────────────────────── */
+    .container {
+      max-width: var(--container);
+      margin-inline: auto;
+      padding-inline: var(--gutter);
+    }
+    .section {
+      padding-block: clamp(48px, 8vw, var(--gap-2xl));
+    }
+    .section + .section { border-top: 1px solid var(--border); }
+    .stack { display: flex; flex-direction: column; }
+    .stack > * + * { margin-top: var(--gap-md); }
+    .row { display: flex; align-items: center; gap: var(--gap-md); }
+    .row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-md); }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--gap-lg); }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-lg); }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap-md); }
+    .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: var(--gap-xl); align-items: start; }
+    .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: var(--gap-xl); align-items: start; }
+    @media (max-width: 920px) {
+      .grid-2, .grid-3, .grid-4, .grid-2-1, .grid-1-2 { grid-template-columns: 1fr; }
+    }
+
+    /* ─── type ──────────────────────────────────────────────────────── */
+    .h1, h1 { font-family: var(--font-display); font-size: var(--fs-h1); line-height: 1.04; letter-spacing: -0.02em; margin: 0; }
+    .h2, h2 { font-family: var(--font-display); font-size: var(--fs-h2); line-height: 1.1; letter-spacing: -0.015em; margin: 0; }
+    .h3, h3 { font-size: var(--fs-h3); font-weight: 600; line-height: 1.3; letter-spacing: -0.005em; margin: 0; }
+    .lead   { font-size: var(--fs-lead); line-height: 1.55; color: var(--muted); max-width: 60ch; margin: 0; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 var(--gap-md);
+    }
+    .meta { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--muted); }
+    .num  { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+    /* ─── chrome: nav + footer ──────────────────────────────────────── */
+    .topnav {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in oklch, var(--bg) 92%, transparent);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .topnav-inner { display: flex; align-items: center; justify-content: space-between; padding-block: 14px; }
+    .topnav .logo { font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+    .topnav nav { display: flex; gap: var(--gap-lg); }
+    .topnav nav a { font-size: 14px; color: var(--muted); }
+    .topnav nav a:hover { color: var(--fg); }
+    .pagefoot { padding-block: var(--gap-xl); color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); }
+    .pagefoot .row-between { flex-wrap: wrap; gap: var(--gap-md); }
+
+    /* ─── buttons ───────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: -0.005em;
+      transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+    .btn-primary:hover { background: color-mix(in oklch, var(--accent) 88%, black); }
+    .btn-secondary { background: transparent; color: var(--fg); border-color: var(--border); }
+    .btn-secondary:hover { border-color: var(--fg); }
+    .btn-ghost { background: transparent; color: var(--fg); border-color: transparent; padding-inline: 8px; }
+    .btn-ghost:hover { color: var(--accent); }
+    .btn-arrow::after { content: '→'; transition: transform 0.15s ease; }
+    .btn-arrow:hover::after { transform: translateX(2px); }
+
+    /* ─── card / surface ────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+    }
+    .card-flat { background: transparent; border: 0; padding: 0; }
+    .card-rule { background: transparent; border: 0; border-top: 1px solid var(--fg); padding: 24px 0 0; border-radius: 0; }
+
+    /* ─── feature cell (icon + h3 + p) ──────────────────────────────── */
+    .feature .feature-mark {
+      width: 36px; height: 36px;
+      display: grid; place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--accent);
+      margin-bottom: var(--gap-md);
+    }
+    .feature .feature-mark svg { width: 18px; height: 18px; }
+    .feature h3 { margin-bottom: 6px; }
+    .feature p  { margin: 0; color: var(--muted); font-size: 15px; }
+
+    /* ─── stat (big number + label) ─────────────────────────────────── */
+    .stat .stat-num {
+      font-family: var(--font-display);
+      font-size: clamp(56px, 8vw, 96px);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .stat .stat-label { color: var(--muted); font-size: 14px; margin-top: 8px; max-width: 24ch; }
+    .stat .stat-unit  { font-size: 0.5em; opacity: 0.7; margin-left: 2px; }
+
+    /* ─── quote / testimonial ───────────────────────────────────────── */
+    .quote {
+      font-family: var(--font-display);
+      font-size: clamp(24px, 2.6vw, 32px);
+      line-height: 1.32;
+      letter-spacing: -0.01em;
+      max-width: 28ch;
+    }
+    .quote-author { color: var(--muted); font-size: 14px; margin-top: var(--gap-md); }
+    .quote-mark   {
+      font-family: var(--font-display);
+      font-size: 140px; line-height: 0.7;
+      color: var(--accent); opacity: 0.18;
+      margin-bottom: -28px;
+    }
+
+    /* ─── pill / badge / tag ────────────────────────────────────────── */
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .tag {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 12px;
+    }
+
+    /* ─── form field ────────────────────────────────────────────────── */
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 13px; color: var(--muted); }
+    .input, .textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--fg);
+      font: inherit;
+      font-size: 15px;
+    }
+    .input:focus, .textarea:focus {
+      outline: 2px solid var(--accent-soft);
+      border-color: var(--accent);
+    }
+    .textarea { min-height: 96px; resize: vertical; line-height: 1.55; }
+
+    /* ─── table (data-style, no chrome) ─────────────────────────────── */
+    .ds-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .ds-table th, .ds-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+    .ds-table th { color: var(--muted); font-weight: 500; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .ds-table tbody tr:hover { background: var(--fg-soft); }
+    .ds-table .num-col { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+    /* ─── image placeholder (DS-tinted block, never broken <img>) ──── */
+    .ph-img {
+      background:
+        linear-gradient(135deg, var(--accent-soft), var(--fg-soft)),
+        var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      aspect-ratio: 16 / 10;
+      display: grid; place-items: center;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+    .ph-img.square    { aspect-ratio: 1 / 1; }
+    .ph-img.portrait  { aspect-ratio: 3 / 4; }
+    .ph-img.wide      { aspect-ratio: 16 / 9; }
+
+    /* ─── divider ───────────────────────────────────────────────────── */
+    .rule  { border: 0; border-top: 1px solid var(--border); margin: 0; }
+    .rule-strong { border: 0; border-top: 1px solid var(--fg); margin: 0; }
+
+    /* ─── hero variants used by layouts.md ──────────────────────────── */
+    .hero          { padding-block: clamp(80px, 12vw, 160px); }
+    .hero-center   { text-align: center; max-width: 32ch; margin-inline: auto; }
+    .hero h1       { margin-bottom: var(--gap-md); }
+    .hero .lead    { margin-bottom: var(--gap-lg); }
+    .hero-cta      { display: inline-flex; gap: var(--gap-sm); flex-wrap: wrap; }
+    .hero-center .hero-cta { justify-content: center; }
+    .hero-split    { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap-2xl); align-items: center; }
+    @media (max-width: 920px) { .hero-split { grid-template-columns: 1fr; } }
+
+    /* ─── log row (newsletter, blog list, changelog) ────────────────── */
+    .log-row { display: grid; grid-template-columns: 120px 1fr 100px; gap: var(--gap-lg); padding: 22px 0; border-top: 1px solid var(--border); align-items: baseline; }
+    .log-row .meta { color: var(--muted); }
+    .log-row h3 { font-size: 19px; }
+    .log-row .pull { text-align: right; }
+  /* The app-specific layer composes the seed's split, log-list and card layouts. */
+[hidden]{display:none!important}h1,h2,h3{font-family:var(--font-display);font-weight:500}.logo small{font:13px var(--font-body);color:var(--muted);margin-left:16px}.topnav-inner{min-height:70px}.section{padding-block:34px}.section:first-child{padding-block:38px 0}.section:first-child+.section{border:0}.eyebrow{color:var(--muted);font-size:10px;letter-spacing:.16em;margin-bottom:14px}h1{font-size:34px;line-height:1.4}.lead{font-size:13px;margin-top:8px}h2{font-size:23px;line-height:1.5}h3{font-size:17px}.meta{font-family:var(--font-body);font-size:12px}.tag{font-size:11px;border-radius:5px}.btn{font-size:12px;padding:9px 13px;border-radius:6px}.modes{margin-top:27px;padding-bottom:14px;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap}.modes>.meta{margin-left:auto}.modes button[aria-pressed=true]{background:var(--fg-soft);border-color:var(--border)}.ontology-layout{grid-template-columns:minmax(0,1.35fr) minmax(310px,1fr);gap:30px;align-items:start}.map-pane{min-width:0;padding:3px 0}.map-pane>.row-between{padding:0 6px}.guide{font-size:12px;color:var(--muted);background:var(--fg-soft);padding:14px;line-height:1.8}#radar{width:100%;max-width:680px;margin:0 auto}.ring{fill:none;stroke:var(--border)}.axis{stroke:var(--border);stroke-dasharray:2 7}.center{fill:var(--surface);stroke:var(--border)}.center-title{fill:var(--fg);font-family:var(--font-display);font-size:17px}.center-role{fill:var(--muted);font-size:10px}.group-label{fill:var(--muted);font-size:12px}.point{cursor:pointer;outline:none}.dot{fill:var(--muted);stroke:var(--bg);stroke-width:3}.point.selected .dot{fill:var(--accent)}.halo{fill:none;stroke:var(--border);stroke-width:1}.point:hover .halo,.point:focus-visible .halo,.point.selected .halo{stroke:var(--accent);stroke-width:2}.halo.unsaved{stroke-dasharray:4 3}.point-label{fill:var(--fg);font-size:11px;pointer-events:none}.point.selected .point-label{font-weight:600}.radar-legend{display:flex;justify-content:center;gap:24px;color:var(--muted);font-size:11px;margin:0 0 22px}.node-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.node-list button{background:transparent;cursor:pointer;padding:7px 10px}.node-list button[aria-pressed=true]{background:var(--fg-soft);color:var(--fg)}.empty-copy{text-align:center;line-height:2}.editor{padding:23px;border-radius:10px}.editor h2{margin:16px 0 21px}.editor .field{margin:16px 0;gap:8px}.field label{font-size:12px}.field label span{float:right;font-size:10px}.editor .textarea{font-size:13px;line-height:1.8;min-height:0;padding:10px 12px}.weight-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.weight-grid .input{font-size:12px;padding:10px 8px}.weight-grid small{font-size:10px;color:var(--muted)}.weight-grid .field{margin:0 0 17px}.evidence,.history{border-top:1px solid var(--border);padding-top:16px;font-size:12px}.evidence summary,.history summary{cursor:pointer;color:var(--muted);font-size:11px}.evidence summary span{float:right}.evidence blockquote{margin:14px 0 8px;padding-left:12px;border-left:2px solid var(--border);font-family:var(--font-display);font-size:15px;line-height:1.8}.evidence .meta{font-size:10px;line-height:1.7}.use-note{font-size:11px;line-height:1.8;color:var(--muted);background:var(--fg-soft);padding:12px;border-radius:5px}.save-row{gap:8px;flex-wrap:wrap}.save-row .row{gap:8px}.history{padding-top:12px;margin-top:15px}.history li{margin:6px 0;color:var(--muted)}.log-row{grid-template-columns:120px minmax(0,1fr) auto;align-items:center;gap:20px}.log-row p{font-size:13px;color:var(--muted);margin:6px 0}.log-row small{font-size:10px;color:var(--muted)}.effects{margin-top:28px;gap:40px}.effects h3{margin:13px 0;font-size:19px}.effects p{font-size:13px;line-height:1.9;color:var(--muted)}.card-rule{border-color:var(--border)}.pagefoot{padding-block:22px}.pagefoot span{font-size:11px}button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.input{font-size:13px}.editor input,.editor textarea{max-width:100%}.row-between{flex-wrap:wrap}#sourceView>.lead{margin-bottom:28px}@media(max-width:920px){.ontology-layout{grid-template-columns:1fr}.editor{max-width:none}.modes>.meta{width:100%;margin:0}.effects{grid-template-columns:1fr}.logo small{display:none}}@media(max-width:600px){.container{padding-inline:20px}.section{padding-block:24px}.topnav-inner{gap:12px}.topnav .tag{font-size:9px}.section:first-child .row-between{align-items:flex-start;gap:18px}.section:first-child .field{width:100%;flex-direction:row;align-items:center;justify-content:space-between}.section:first-child select{max-width:120px}h1{font-size:30px}.editor{padding:18px}.log-row{grid-template-columns:1fr;gap:9px}.log-row>.btn{justify-self:start}.weight-grid{gap:10px}.radar-legend{gap:14px;font-size:10px}.point-label{font-size:12px}.group-label{font-size:13px}.editor .row-between .meta{font-size:10px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+</style>
+</head>
+<body>
+<header class="topnav"><div class="container topnav-inner"><span class="logo">知君 <small>／ 记忆 · 用户画像</small></span><span class="tag">交互设计稿 · 全部内容为示例</span></div></header>
+<main id="content">
+ <section class="section" data-od-id="ontology-heading"><div class="container"><div class="row-between"><div><p class="eyebrow">THE COMPASS OF YOU</p><h1>本体雷达</h1><p class="lead">以你亲自确认的理解，慢慢画出现在的自己。</p></div><div class="field"><label for="role">当前角色 · 本体独立</label><select id="role" class="input"><option value="personal">个人</option><option value="work">工作</option></select></div></div><div class="row modes" aria-label="画像视图"><button class="btn btn-secondary" id="mapTab" aria-pressed="true">本体雷达</button><button class="btn btn-ghost" id="sourceTab" aria-pressed="false">记忆资料</button><span class="meta" id="counts"></span></div></div></section>
+ <section class="section" data-od-id="ontology-workspace"><div class="container">
+  <div id="radarView" class="hero-split ontology-layout">
+   <div class="map-pane"><div class="row-between"><span class="meta">已确认的核心理解</span><button class="btn btn-ghost" id="guideButton" aria-expanded="false">读图说明 ↗</button></div><p class="guide" id="guide" hidden>一个点是一项本人确认的理解。点越大，对你越重要；越靠近中心，越贴近这个角色里的你。方向仅代表类别。拖动不用于改分，避免误触；点击后可在右侧精确调整。</p><svg id="radar" viewBox="0 0 620 560" role="group" aria-label="可编辑的本体雷达"></svg><p class="radar-legend"><span>● 大小：重要程度</span><span>◎ 距离：与我的关联</span></p><div id="nodeList" class="node-list" aria-label="全部本体节点"></div><p class="meta empty-copy" id="empty" hidden>这里还没有你确认过的本体。<br/>从核对一项理解开始，图上的位置不需要被填满。</p></div>
+   <aside class="card editor" aria-label="本体节点详情" id="detail"><div class="row-between"><span class="meta" id="nodeMeta"></span><span class="tag" id="stateLabel"></span></div><h2 id="nodeTitle"></h2><form id="editForm"><div class="field"><label for="statement">我的理解 <span>可以直接修改</span></label><textarea class="textarea" id="statement" rows="3" required></textarea></div><div class="field"><label for="conditions">适用情境与例外</label><textarea class="textarea" id="conditions" rows="2"></textarea></div><div class="weight-grid"><div class="field"><label for="importance">对我的重要程度</label><select class="input" id="importance"><option value="1">一般</option><option value="2">重要</option><option value="3">非常重要</option></select><small>改变圆点大小</small></div><div class="field"><label for="affinity">与我的关联程度</label><select class="input" id="affinity"><option value="5">核心 · 很贴近我</option><option value="4">密切</option><option value="3">相关</option><option value="2">间接</option><option value="1">外围</option></select><small>越贴近，越靠近中心</small></div></div><details open class="evidence"><summary>依据与来源 <span id="evidenceCount"></span></summary><div id="evidence"></div></details><p class="use-note" id="useNote"></p><div class="row-between save-row"><button class="btn btn-ghost" type="button" id="disable">停止使用</button><div class="row"><button class="btn btn-secondary" type="button" id="cancel">还原</button><button class="btn btn-primary" type="submit" id="save">保存修改</button></div></div><p class="meta" id="draftStatus" aria-live="polite"></p></form><details class="history"><summary>修改记录</summary><ol id="history"></ol></details></aside>
+  </div>
+  <div id="sourceView" hidden><div class="row-between"><h2>记忆资料</h2><span class="tag">事实与理解分别确认</span></div><p class="lead">每一项理解，都能回到当时的原话。</p><div id="sourceList"></div></div>
+ </div></section>
+ <section class="section" data-od-id="candidates"><div class="container"><div class="row-between"><div><h2>还想和你核对</h2><p class="meta">新线索先停在这里，得到你的确认后，才进入本体。</p></div><span class="tag" id="queueCount"></span></div><div id="candidateList"></div><p class="meta" id="feedback" role="status" aria-live="polite"></p></div></section>
+ <section class="section" data-od-id="understanding"><div class="container"><div class="row-between"><div><p class="eyebrow">UNDERSTAND, WITH CONTEXT</p><h2>这些理解，会怎样帮助知君？</h2></div><span class="tag">作用演示</span></div><div class="grid-2 effects"><article class="card card-rule"><span class="meta">01 / 当你导入一份资料</span><h3>先读懂资料，再理解它与你的关系。</h3><p>先提取人物、事件与原文观点，再参考相关本体节点，标出值得你留意的线索。资料里的作者观点，不会直接写成你的立场。</p></article><article class="card card-rule"><span class="meta">02 / 当你带着问题来对话</span><h3>带着依据理解，留出改变的余地。</h3><p id="conversationExample"></p><p class="meta">你可以查看“本次参考了哪些理解”，也可以临时排除某一项。</p></article></div></div></section>
+</main><footer class="pagefoot"><div class="container row-between"><span>你有权确认、修正，也有权改变。</span><span class="meta">示例仅在本页内存中运行 · 刷新恢复 · 未连接真实记忆</span><button class="btn btn-ghost" id="reset">重置演示</button></div></footer>
+<script>
+const groups=['价值与原则','自我定位','应对与决策','希望成为','理解与回应'];
+const samples={personal:[
+ {id:'trust',group:0,title:'长期可信',statement:'遇到利益取舍时，我更重视长期可信，而非一次性的收益。',conditions:'适用于合作与承诺；并不意味着放弃合理回报。',importance:3,affinity:5,quote:'这次收益更高，但承诺做不到，我宁愿先不接。',source:'一次合作取舍的对话',history:['v1 · 本人确认纳入本体'],state:'confirmed'},
+ {id:'family',group:0,title:'为重要的人留时间',statement:'我希望为家人和重要的朋友，保留不被工作持续挤占的时间。',conditions:'允许短期赶工，但要有结束时间。',importance:3,affinity:4,quote:'忙完这个阶段，我想把周末的一段时间留给家人。',source:'关于时间安排的对话',history:['v1 · 本人确认纳入本体'],state:'confirmed'},
+ {id:'maker',group:1,title:'创造者',statement:'我喜欢把抽象的想法变成可以被体验的作品。',conditions:'描述我喜欢的方式，不要求每件事都产生成果。',importance:2,affinity:4,quote:'做出一个能试用的小东西，我才更容易想清楚。',source:'一次创作复盘',history:['v1 · 本人确认纳入本体'],state:'confirmed'},
+ {id:'try',group:2,title:'先做小范围尝试',statement:'面对可以撤回的决定，我倾向先做一个小尝试，再判断是否继续。',conditions:'涉及难以撤回的承诺时，先充分核对。',importance:2,affinity:3,quote:'我们先试一周，看看感受，再决定要不要长期做。',source:'一次选择的对话',history:['v1 · 本人确认纳入本体'],state:'confirmed'},
+ {id:'learn',group:3,title:'保持学习',statement:'我希望给长期学习留出空间，而不只回应眼前的事情。',conditions:'现阶段优先选择与正在探索的问题相关的内容。',importance:2,affinity:2,quote:'最近总在处理眼前的事，我想重新留一点时间学习。',source:'一段自我回顾',history:['v1 · 本人确认纳入本体'],state:'confirmed'},
+ {id:'listen',group:4,title:'先听我说完',statement:'当我表达困惑时，希望先被听见，再一起讨论建议。',conditions:'我明确求助具体做法时，可以直接给出方案。',importance:1,affinity:5,quote:'先让我把这件事说完，我暂时还不需要办法。',source:'关于交流方式的对话',history:['v1 · 本人确认纳入本体'],state:'confirmed'}],work:[]};
+const pendingSeed={id:'independent',group:2,title:'独立判断',statement:'在重要选择上，我希望听取不同意见，再形成自己的判断。',conditions:'这是从一次讨论里提出的理解，需要本人核对适用范围。',importance:2,affinity:3,quote:'意见我想都听一下，但最后还是想自己判断。',source:'一次决定前的对话',history:['v1 · 根据记忆提出，尚未本人确认'],state:'pending'};
+let data=structuredClone(samples),pending={personal:[structuredClone(pendingSeed)],work:[]},role='personal',selected='trust',draft=null;
+const $=id=>document.getElementById(id),escapeText=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const current=()=>data[role].concat(pending[role]).find(x=>x.id===selected),active=()=>data[role].filter(x=>x.state==='confirmed');
+const label=()=>role==='personal'?'个人':'工作';
+function renderMap(){
+ let parts=['<title>本体雷达</title><desc>大小代表重要程度；与中心的距离代表关联程度。点选节点可以编辑。</desc>'];
+ [90,136,180,220].forEach(r=>parts.push(`<circle cx="310" cy="274" r="${r}" class="ring"/>`));
+ groups.forEach((g,i)=>{let a=(-90+i*72)*Math.PI/180;parts.push(`<line x1="310" y1="274" x2="${310+Math.cos(a)*220}" y2="${274+Math.sin(a)*220}" class="axis"/><text x="${310+Math.cos(a)*257}" y="${279+Math.sin(a)*250}" text-anchor="middle" class="group-label">${g}</text>`)});
+ parts.push(`<circle cx="310" cy="274" r="40" class="center"/><text x="310" y="270" text-anchor="middle" class="center-title">现在的我</text><text x="310" y="290" text-anchor="middle" class="center-role">${label()}</text>`);
+ active().forEach((saved)=>{let n=draft&&saved.id===selected?{...saved,...draft}:saved;let peers=active().filter(x=>x.group===n.group);let offset=peers.length>1?(peers.findIndex(x=>x.id===n.id)*24-12):0;let a=(-90+n.group*72+offset)*Math.PI/180,dist=220-(n.affinity-1)*33,r=[0,9,14,18][n.importance],x=310+Math.cos(a)*dist,y=274+Math.sin(a)*dist;
+ parts.push(`<g class="point ${selected===n.id?'selected':''}" role="button" tabindex="0" aria-pressed="${selected===n.id}" aria-label="编辑：${escapeText(n.title)}" data-id="${n.id}"><title>${escapeText(n.statement)}</title><circle cx="${x}" cy="${y}" r="25" fill="transparent"/><circle cx="${x}" cy="${y}" r="${r+6}" class="halo ${draft&&selected===n.id?'unsaved':''}"/><circle cx="${x}" cy="${y}" r="${r}" class="dot"/><text x="${x}" y="${y-r-15}" text-anchor="middle" class="point-label">${escapeText(n.title)}</text></g>`);
+ });
+ $('radar').innerHTML=parts.join('');$('empty').hidden=active().length>0;$('counts').textContent=`${active().length} 项已确认 · ${pending[role].length} 项待核对 · 仅用于${label()}角色`;
+ $('nodeList').innerHTML=active().map(n=>`<button type="button" class="tag" data-id="${n.id}" aria-pressed="${selected===n.id}">${escapeText(n.title)}</button>`).join('');
+ document.querySelectorAll('[data-id]').forEach(el=>{el.onclick=()=>select(el.dataset.id);el.onkeydown=e=>{if(el.tagName.toLowerCase()==='g'&&['Enter',' '].includes(e.key)){e.preventDefault();select(el.dataset.id)}}});
+ const used=active().find(n=>n.id==='trust');$('conversationExample').textContent=used?`例如你问“这个合作要不要接”，知君可以结合你确认的“${used.statement}”，先核对履约条件与长期影响，而不只比较收益。最终取舍仍由你决定。`:'当前角色还没有已确认本体。知君会先根据这次对话理解你的问题，并在需要时向你澄清。';
+}
+function select(id){if(draft&&!confirm('有尚未保存的修改。放弃这些修改并切换节点？'))return;selected=id;draft=null;renderMap();renderDetail()}
+function renderDetail(){const n=current();$('detail').hidden=!n;if(!n)return;$('nodeMeta').textContent=groups[n.group];$('stateLabel').textContent=n.state==='pending'?'待本人确认':n.state==='inactive'?'已停止使用':'本人确认';$('nodeTitle').textContent=n.title;['statement','conditions','importance','affinity'].forEach(k=>$(k).value=n[k]);$('evidenceCount').textContent='1 条示例依据';$('evidence').innerHTML=`<blockquote>“${escapeText(n.quote)}”</blockquote><p class="meta">${escapeText(n.source)} · 示例原话</p><p class="meta">事实已核对 ≠ 推导出的理解已确认</p>`;$('history').innerHTML=n.history.map(h=>`<li>${escapeText(h)}</li>`).join('');$('useNote').textContent=n.state==='pending'?'核对这项理解及其适用范围后，再决定是否纳入本体。':'保存后用于后续对话与资料理解；当前明确表达优先于过去的理解。';$('save').textContent=n.state==='pending'?'确认并纳入本体':'保存修改';$('save').disabled=n.state==='inactive';$('disable').textContent=n.state==='pending'?'暂不纳入':n.state==='inactive'?'恢复使用':'停止使用';$('draftStatus').textContent='';}
+function renderQueue(){const items=pending[role];$('queueCount').textContent=`${items.length} 项待核对`;$('candidateList').innerHTML=items.length?items.map(n=>`<article class="log-row"><span class="meta">等待你确认</span><div><h3>${escapeText(n.title)}</h3><p>${escapeText(n.statement)}</p><small>根据记忆提出 · 尚未用于核心本体</small></div><button class="btn btn-secondary" data-review="${n.id}">核对 ↗</button></article>`).join(''):'<p class="meta">目前没有新的待确认理解。</p>';document.querySelectorAll('[data-review]').forEach(el=>el.onclick=()=>{setView(false);select(el.dataset.review);$('detail').scrollTo({top:0});window.scrollTo({top:100,behavior:'smooth'})});}
+function renderSources(){$('sourceList').innerHTML=data[role].concat(pending[role]).map(n=>`<article class="log-row"><span class="meta">${n.state==='pending'?'理解待确认':n.state==='inactive'?'本体已停用':'理解已确认'}</span><div><h3>${escapeText(n.source)}</h3><p>“${escapeText(n.quote)}”</p><small>关联理解：${escapeText(n.title)}</small></div><button class="btn btn-secondary" data-source="${n.id}">查看理解</button></article>`).join('')||'<p>这个角色还没有记忆资料。</p>';document.querySelectorAll('[data-source]').forEach(el=>el.onclick=()=>{setView(false);select(el.dataset.source)})}
+function setView(sources){$('sourceView').hidden=!sources;$('radarView').hidden=sources;$('sourceTab').setAttribute('aria-pressed',String(sources));$('mapTab').setAttribute('aria-pressed',String(!sources));if(sources)renderSources()}
+function render(){renderMap();renderDetail();renderQueue();renderSources()}
+['statement','conditions','importance','affinity'].forEach(k=>$(k).addEventListener('input',()=>{draft={statement:$('statement').value,conditions:$('conditions').value,importance:Number($('importance').value),affinity:Number($('affinity').value)};renderMap();$('draftStatus').textContent='预览中 · 保存后才生效'}));
+$('editForm').onsubmit=e=>{e.preventDefault();let n=current();if(!$('statement').value.trim())return;Object.assign(n,draft||{},{statement:$('statement').value.trim(),conditions:$('conditions').value});if(n.state==='pending'){pending[role]=pending[role].filter(x=>x.id!==n.id);data[role].push(n);n.state='confirmed'}n.history.push(`v${n.history.length+1} · 本人保存并确认 · ${new Date().toLocaleTimeString('zh-CN')}`);draft=null;render();$('draftStatus').textContent='已保存到本次演示 · 可在修改记录查看';};
+$('cancel').onclick=()=>{draft=null;renderMap();renderDetail()};
+$('disable').onclick=()=>{let n=current();if(n.state==='pending'){pending[role]=pending[role].filter(x=>x.id!==n.id);selected=active()[0]?.id||'';render();$('feedback').textContent='本次示例未纳入本体；原始事实不受影响。';return}n.state=n.state==='inactive'?'confirmed':'inactive';n.history.push(`v${n.history.length+1} · ${n.state==='inactive'?'本人停止使用':'本人恢复使用'}`);draft=null;render();$('draftStatus').textContent=n.state==='inactive'?'已停止用于理解，来源仍保留，可在此恢复。':'已恢复使用。'};
+$('role').onchange=e=>{if(draft&&!confirm('放弃未保存的修改并切换角色？')){e.target.value=role;return}role=e.target.value;selected=active()[0]?.id||'';draft=null;$('feedback').textContent='';render()};
+$('guideButton').onclick=()=>{$('guide').hidden=!$('guide').hidden;$('guideButton').setAttribute('aria-expanded',String(!$('guide').hidden))};
+$('mapTab').onclick=()=>setView(false);$('sourceTab').onclick=()=>setView(true);$('reset').onclick=()=>{data=structuredClone(samples);pending={personal:[structuredClone(pendingSeed)],work:[]};role='personal';$('role').value=role;selected='trust';draft=null;$('feedback').textContent='';setView(false);render()};render();
+</script>
+
+</body></html>

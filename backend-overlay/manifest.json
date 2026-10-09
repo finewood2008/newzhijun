@@ -1,0 +1,42 @@
+{
+  "base_version": "1.0.2b4 + existing Zhijun ontology modules",
+  "files": {
+    "api/routers/role_ontology.py": {
+      "before_sha256": null,
+      "after_sha256": "1242bf6df302afd7e1e64143997f2e56a0760e7b027059cb805de4394ad13541"
+    },
+    "api/routers/agents.py": {
+      "before_sha256": "65dfde0e6fdfe4bbb569307ace1f1f5558302c9acc0bcf8c6d24478c3f819931",
+      "after_sha256": "28823e3655d62c894c8d62048368a60946b801b84e8aac54e9483081655c9a8e"
+    },
+    "infra/agents/role_ontology.py": {
+      "before_sha256": null,
+      "after_sha256": "bf92639a93cff6029459a591a211ebdaa1856547a0c3d7240c09e2d4735fafde"
+    },
+    "infra/agents/ontology_types.py": {
+      "before_sha256": "630fb9681b5d2b14878beffcf91badd57de5bb810d7e150394636a3802593845",
+      "after_sha256": "ddd0fc3a88efb4e7d5f03f953c1c15844135b942a9414f17128775c0533db8eb"
+    },
+    "infra/agents/personal_ontology.py": {
+      "before_sha256": "31df43a033da1f6f588f5b53d9b93a7ce781969773e0cc1126de4c362201ffe5",
+      "after_sha256": "376af0312b425fffa61eb36a08f5f6f454f10836aeba42070c6103c3bb3239cb"
+    },
+    "infra/agents/ontology_admission.py": {
+      "before_sha256": "e3b9546c22e692f9e4f2e5dca0232312f818079bc7817c4d72421d82ca9bbd0e",
+      "after_sha256": "e3b9546c22e692f9e4f2e5dca0232312f818079bc7817c4d72421d82ca9bbd0e"
+    },
+    "infra/agents/manager.py": {
+      "before_sha256": "37d5771dbdbf65968d5578601816126ca964fcb4db973fa25362cc588a5ce9ca",
+      "after_sha256": "7b97200b3e4418bc70d87474564098120aac8ce4e64727b56c571c41365e8c0d"
+    }
+  },
+  "dependencies": {
+    "infra/agents/ontology_runtime.py": "27da70b60246c4ce12be2486d1964f3f71e0381e83b16cd81bc1c5327c6fe592",
+    "infra/agents/ontology_graph.py": "1df60e42a8b4224b420796be7651e5b6684fdcd2530cfcf77b8bc7b228b82408",
+    "infra/agents/ontology_dedup.py": "2cf87489dbbfb7f5155d1a117f183ca6829d11b4b8f769e1c20b4c3d850a9b61",
+    "infra/agents/knowledge_understanding.py": "818688dd488fbda9715896ea1c147b7e8c44dea767f8c9f81d792f1c8e177654",
+    "infra/agents/understanding_types.py": "861f1e05858426d5743b87ffb64d2b619c1a960d0bc2401b027b0917e00de906",
+    "infra/agents/memory/zhijun_recall.py": "3fd94fd4df4f0fbf8949b6e302c561a76f7100361a0fb3ea930989bbbea1ace0",
+    "infra/agents/zhijun.py": "9dcabc1aed676977a24103f104b5da50fa4722871fd23e9503543aa6a43c4851"
+  }
+}

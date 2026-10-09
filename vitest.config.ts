@@ -1,0 +1,2 @@
+import {defineConfig} from 'vitest/config';import {fileURLToPath} from 'node:url';
+export default defineConfig({resolve:{alias:{'@native':fileURLToPath(new URL('./src/native',import.meta.url))}},test:{environment:'jsdom',setupFiles:['tests/ui-setup.ts'],include:['src/native/extensions/memory/*.test.tsx','src/references.test.tsx','src/roles.test.tsx','src/shell.test.tsx','src/ontology.test.tsx']}});
