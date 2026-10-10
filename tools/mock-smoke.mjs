@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
 import {WebSocket} from 'ws';
+const {version}=JSON.parse(await readFile(new URL('../package.json',import.meta.url)));
 const runtime=JSON.parse(await readFile(new URL('../verification/full-mock-20261010/mock-runtime.json',import.meta.url)));
 assert.equal(new URL(runtime.origin).hostname,'127.0.0.1');assert.equal(new URL(runtime.upstream).hostname,'127.0.0.1');
 const results=[];let cookie='';
@@ -13,7 +14,7 @@ await flags({offline:false,failUpload:false,failSave:false,qr:'success'});
 await test('unauthenticated data is denied',async()=>assert.equal((await request('/native-memory/stats/counts')).status,401));
 await test('incorrect mock login is rejected',async()=>assert.equal((await request('/login','POST',{username:'mock-alice',password:'wrong'})).status,401));
 await test('login and private instance are ready',async()=>{cookie=await login('mock-alice');const u=await api('/me');assert.equal(u.ready,true);assert.equal(u.id,701);assert.ok(u.roles.some(r=>r.id==='personal')&&u.roles.some(r=>r.id==='work'));});
-await test('current version is reported',async()=>assert.equal((await api('/status')).version,'0.4.0'));
+await test('current version is reported',async()=>assert.equal((await api('/status')).version,version));
 await test('an unprovisioned mock account gets pending state',async()=>{const pending=await login('mock-pending');const me=await api('/me','GET',undefined,'personal',pending);assert.equal(me.ready,false);assert.match(me.reason,/尚未开通/);});
 let tid,bid;
 await test('create and rename a conversation',async()=>{tid=(await api('/threads','POST',{})).thread_id;await api('/threads/'+tid,'PATCH',{title:'Mock smoke 对话'});assert.ok((await api('/threads')).some(t=>t.thread_id===tid&&t.title==='Mock smoke 对话'));});

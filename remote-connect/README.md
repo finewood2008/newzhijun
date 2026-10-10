@@ -1,6 +1,6 @@
 # WANX / 知君远程连接测试版
 
-版本：知君桌面 0.3.0；Headscale 0.29.4；Tailscale/tsnet 1.104.1。
+版本：知君桌面版本见 `../desktop/package.json`；Headscale 0.29.4；Tailscale/tsnet 1.104.1。
 
 ## 当前交付状态
 
