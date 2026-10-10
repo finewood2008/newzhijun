@@ -3,24 +3,26 @@ const output=path.resolve(process.argv[2]||path.join(__dirname,'../release'));
 process.chdir(path.resolve(__dirname,'..'));
 const packageVersion=JSON.parse(fs.readFileSync('package.json')).version;
 const archive=path.join(output,'win-unpacked/resources/app.asar'),files=asar.listPackage(archive);
+// ASAR splits directory names using the host path separator.
+const extract=name=>asar.extractFile(archive,path.normalize(name));
 assert(!files.some(f=>/deployment\.json|\.env$|\.sqlite|tls\.key|identity\.json|sessions\.enc|session-key|\.pem$/.test(f)));
 const legacyFiles=files.filter(f=>/server-profile\.json|renderer[/\\]connect\.(?:html|js|css)|shell[/\\](?:connection|gateway|remote)\.cjs|server[/\\]desktop-service\.mjs/.test(f));
 assert.deepEqual(legacyFiles,[],'Legacy connection entry must not ship');
 assert(!fs.existsSync(path.join(output,'win-unpacked/resources/bin/wanx-link-win32-amd64.exe')));
-for(const f of ['shell/main.cjs','shell/runtime.cjs','shell/session-store.cjs','resources/icon.ico','renderer/index.html'])assert.deepEqual(asar.extractFile(archive,f),fs.readFileSync(f),f);
-const main=asar.extractFile(archive,'shell/main.cjs').toString();
+for(const f of ['shell/main.cjs','shell/runtime.cjs','shell/session-store.cjs','resources/icon.ico','renderer/index.html'])assert.deepEqual(extract(f),fs.readFileSync(f),f);
+const main=extract('shell/main.cjs').toString();
 assert.match(main,/loadURL\(runtime\.origin\+'\/'\)/);
 assert(!/server-profile|RemoteLink|\/connect\b|连接服务器/.test(main));
 function verifyFolder(folder,prefix,filter=()=>true,relative=''){
  for(const entry of fs.readdirSync(folder,{withFileTypes:true})){
   const rel=path.join(relative,entry.name),file=path.join(folder,entry.name);
   if(entry.isDirectory())verifyFolder(file,prefix,filter,rel);
-  else if(filter(rel))assert.deepEqual(asar.extractFile(archive,prefix+'/'+rel.split(path.sep).join('/')),fs.readFileSync(file),rel);
+  else if(filter(rel))assert.deepEqual(extract(prefix+'/'+rel.split(path.sep).join('/')),fs.readFileSync(file),rel);
  }
 }
 verifyFolder(path.resolve('../dist'),'renderer');
 verifyFolder(path.resolve('../server'),'server',f=>f.endsWith('.mjs')&&!['index.mjs','desktop-service.mjs'].includes(f));
-assert.equal(JSON.parse(asar.extractFile(archive,'package.json')).version,packageVersion);
+assert.equal(JSON.parse(extract('package.json')).version,packageVersion);
 function pe(file){
  const b=fs.readFileSync(file),off=b.readUInt32LE(0x3c),magic=b.readUInt16LE(off+24),dir=off+24+(magic===0x20b?112:96),certOffset=b.readUInt32LE(dir+32),certSize=b.readUInt32LE(dir+36);
  assert.equal(b.toString('ascii',off,off+4),'PE\0\0');
