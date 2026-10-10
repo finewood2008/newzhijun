@@ -70,3 +70,15 @@ python3 tools/install-ontology-backend.py /path/to/wanx/packages/octop \
 - 与“记忆 → 主动关心”共用原生角色设置，保存后原生 scheduler.reschedule 生效。打开页面只读，已有自定义频率原样显示。后台以账户时区安排、优先最近 IM 会话；微信需要已核验本人、启用并有会话。设置频率不是保证每次投递。
 - 对话列表与当前标题显示原生 `channel_type` 来源，微信、客户端等分别标注；缺失来源显示“来源未知”，未知类型显示“其他渠道”，不猜测历史来源。
 - 本机验收：微信真实会话及客户端历史均有对应标签；设置能够读取现有角色配置。保存与权限隔离通过自动化测试；没有为了验收提高真实账户联系频率或主动向微信发送测试消息。
+
+### 万象源码分支同步（2026-10-10）
+
+知君 0.4.4 的配套后端逻辑已合入万象源码分支 `hotfix/zhijun-wechat-20261010`：
+
+- GitHub：<https://github.com/finewood2008/centaur-WANX/tree/hotfix/zhijun-wechat-20261010>
+- Codeup：`https://codeup.aliyun.com/667637d76d5f7b05cc5d9ed7/nexusaos/nexusaos-centuarai-omnia.git`，同名分支。
+- 范围：角色隔离的本体候选整理、对话明确确认入本体、微信扫码本人绑定、入站和主动推送的身份校验。
+
+万象分支基于 `b2aae47` 合并，并保留其已有启动超时及兼容修复；这与本仓库针对旧运行时提供的完整文件 overlay 并非逐字相同。新版万象应从其源码分支部署，不要再次覆盖旧 overlay，也不要绕过安装器的版本/哈希检查。
+
+代码同步不等于服务器部署；Windows EXE 只更新客户端，不会自动更新万象后端。升级服务端前备份配置和数据，更新后对旧微信绑定重新扫码核验本人。
