@@ -1,0 +1,2 @@
+const labels:Record<string,string>={dashboard:'客户端',web:'客户端',websocket:'客户端',weixin:'微信',wechat:'微信',wecom:'企业微信',feishu:'飞书',lark:'飞书',dingtalk:'钉钉',telegram:'Telegram',discord:'Discord',slack:'Slack',qq:'QQ',api:'API',cli:'终端'};
+export function ChannelBadge({channel}:{channel?:string}){const label=channel?labels[channel]||'其他渠道':'来源未知';return <small className="channel-badge" data-channel={channel==='weixin'?'weixin':'other'} title={`对话来源：${label}`}>{label}</small>;}

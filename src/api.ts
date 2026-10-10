@@ -24,7 +24,7 @@ export async function api<T=any>(path:string, method='GET', body?:unknown, signa
 }
 export type Role={id:string;name:string;description:string};
 export type User={id:number;name:string;ready:boolean;reason:string;expertId?:string;expertChoices?:{id:string;name:string}[];roles?:Role[];canCreateRoles?:boolean};
-export type Thread={thread_id:string;title:string;last_active:number};
+export type Thread={thread_id:string;title:string;last_active:number;channel_type?:string};
 export function textContent(content:unknown):string {
   if(typeof content==='string') return content;
   if(Array.isArray(content)) return content.filter(x=>x?.type==='text').map(x=>String(x.text||'')).join('\n');

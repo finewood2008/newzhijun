@@ -47,6 +47,18 @@
     "infra/agents/role_ontology_flow.py": {
       "before_sha256": null,
       "after_sha256": "6cd6fbb2a28eb0b29c72d2675540e9ed9caf851601b12ce4b8647a61d5c4fb44"
+    },
+    "api/routers/channels.py": {
+      "before_sha256": "7fc14608888ef58266cbe5f434d86ac33b6522a7deaf2c9fb3af747b642d918d",
+      "after_sha256": "65bf987795dbd0ff4faa9bdab50ceeecc31e0db5c2afd72a41fb863f8ee61692"
+    },
+    "infra/gateway/gateway.py": {
+      "before_sha256": "0b484033fcd2239b28fac0b676341aec40cd831b5a7f9d82359354e41e124da3",
+      "after_sha256": "63f9af86be89788fce7acf96b9e580316d947832fb9af0fa17961bd833a10fbb"
+    },
+    "infra/gateway/channels/zhijun_weixin.py": {
+      "before_sha256": "a40b8f9c6d3cf2009d282cedc94b64963c70d3b83ad9b87087eb1845cf98cfc0",
+      "after_sha256": "7c6b1d81d859fdf7a39ff32469fdd431bbac6850c0f799525d25615f478c6d66"
     }
   },
   "dependencies": {

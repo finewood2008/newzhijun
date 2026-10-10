@@ -29,14 +29,14 @@ it('only asks about experts when there are multiple, then enters the chosen spac
  expect(await screen.findByRole('dialog',{name:'想连接哪一位知君？'})).toBeVisible();
  expect(mocked.mock.calls.some(([path])=>path==='/threads')).toBe(false);
  fireEvent.click(screen.getByRole('button',{name:/知君 · 人生上下文/}));
- expect(await screen.findByRole('button',{name:'测试者，私人空间与设置'})).toBeVisible();
+ expect(await screen.findByRole('button',{name:'测试者，设置中心'})).toBeVisible();
  expect(mocked).toHaveBeenCalledWith('/connection/agents','POST',{agentId:'second'});
  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
 it('enters a single automatically matched expert with no expert picker',async()=>{
  render(<App/>);
- expect(await screen.findByRole('button',{name:'测试者，私人空间与设置'})).toBeVisible();
+ expect(await screen.findByRole('button',{name:'测试者，设置中心'})).toBeVisible();
  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
  expect(screen.queryByText('选择我的知君实例')).not.toBeInTheDocument();
  expect(screen.queryByRole('button',{name:'连接服务，搜索或切换 万象WANX'})).not.toBeInTheDocument();
@@ -66,7 +66,7 @@ it('keeps the login form hidden while restoring an existing session',async()=>{
   mocked.mockImplementation(async path=>path==='/me'?new Promise(resolve=>{finish=resolve;}):path==='/threads'?[]:{connected:true});
   render(<App/>);expect(screen.getByRole('status')).toHaveTextContent('正在回到');
   expect(screen.queryByRole('form',{name:'登录知君'})).not.toBeInTheDocument();
-  await act(async()=>finish(user));expect(await screen.findByRole('button',{name:'测试者，私人空间与设置'})).toBeVisible();
+  await act(async()=>finish(user));expect(await screen.findByRole('button',{name:'测试者，设置中心'})).toBeVisible();
 });
 it('offers connection retry rather than login when session lookup fails offline',async()=>{
   let offline=true;
@@ -74,16 +74,16 @@ it('offers connection retry rather than login when session lookup fails offline'
   render(<App/>);expect(await screen.findByRole('alert')).toHaveTextContent('网络中断');
   expect(screen.queryByLabelText('账号')).not.toBeInTheDocument();
   offline=false;fireEvent.click(screen.getByRole('button',{name:'重新连接'}));
-  expect(await screen.findByRole('button',{name:'测试者，私人空间与设置'})).toBeVisible();
+  expect(await screen.findByRole('button',{name:'测试者，设置中心'})).toBeVisible();
 });
 it('opens settings through the avatar and clears private content on session expiry',async()=>{
-  render(<App/>);fireEvent.click(await screen.findByRole('button',{name:'测试者，私人空间与设置'}));
+  render(<App/>);fireEvent.click(await screen.findByRole('button',{name:'测试者，设置中心'}));
   expect(screen.queryByRole('button',{name:'设置'})).not.toBeInTheDocument();
-  expect(screen.getByRole('heading',{name:'你的私人空间'})).toBeVisible();
+  expect(screen.getByRole('heading',{name:'设置中心'})).toBeVisible();
   expect(screen.getAllByRole('button',{name:'当前角色：个人，切换或创建角色'})).toHaveLength(1);
   act(()=>window.dispatchEvent(new Event('session-expired')));
   expect(await screen.findByRole('form',{name:'登录知君'})).toBeVisible();
-  expect(screen.queryByRole('button',{name:'测试者，私人空间与设置'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'测试者，设置中心'})).not.toBeInTheDocument();
 });
 it('separates account and role settings and saves an account name with feedback',async()=>{
   const refresh=vi.fn();render(<Settings user={user} roleName="工作" onUser={refresh} onLogout={()=>{}}/>);
@@ -135,4 +135,75 @@ it('logs in without the local slider and permits retry after a wrong password',a
   fireEvent.click(screen.getByRole('button',{name:'进入知君'}));expect(await screen.findByRole('alert')).toHaveTextContent('账号或密码有误');expect(screen.getByRole('button',{name:'进入知君'})).toBeEnabled();
   reject=false;fireEvent.click(screen.getByRole('button',{name:'进入知君'}));await waitFor(()=>expect(success).toHaveBeenCalledOnce());
   expect(mocked).toHaveBeenCalledWith('/login','POST',{username:'test',password:'password',captcha_token:undefined});
+});
+
+it('refreshes incoming channel conversations on focus without changing the open conversation',async()=>{
+ let rows=[{thread_id:'web',title:'已有对话'}];
+ mocked.mockImplementation(async path=>path==='/me'?user:path==='/threads'?rows:{connected:true});
+ render(<App/>);fireEvent.click(await screen.findByRole('button',{name:'已有对话'}));
+ expect(await screen.findByText('对话内容')).toBeVisible();
+ rows=[{thread_id:'wx',title:'微信新消息'},...rows];
+ fireEvent(window,new Event('focus'));
+ expect(await screen.findByRole('button',{name:'微信新消息'})).toBeVisible();
+ expect(screen.getByText('对话内容')).toBeVisible();
+});
+
+it('polls visible conversation lists and stops polling when unmounted',async()=>{
+ const {unmount}=render(<App/>);await screen.findByRole('button',{name:'测试者，设置中心'});
+ vi.useFakeTimers();
+ // Remount while fake timers are active so the recurring timers are controlled.
+ unmount();const mounted=render(<App/>);
+ try{
+  await act(async()=>{await Promise.resolve();await Promise.resolve();});
+  const before=mocked.mock.calls.filter(([p])=>p==='/threads').length;
+  await act(async()=>{await vi.advanceTimersByTimeAsync(5001);});
+  expect(mocked.mock.calls.filter(([p])=>p==='/threads').length).toBeGreaterThan(before);
+  mounted.unmount();const after=mocked.mock.calls.length;
+  await act(async()=>{await vi.advanceTimersByTimeAsync(10000);});
+  expect(mocked.mock.calls.length).toBe(after);
+ }finally{vi.useRealTimers();}
+});
+
+it('discards a late personal refresh after switching to work',async()=>{
+ let delayed=false,finish:(value:unknown)=>void=()=>{};
+ const both={...user,roles:[...user.roles,{id:'work',name:'工作',description:'工作语境'}]};
+ const {getActiveRole}=await import('./api');
+ mocked.mockImplementation(async path=>{
+  if(path==='/me')return both;
+  if(path==='/threads'){
+   if(getActiveRole()==='work')return [{thread_id:'work-thread',title:'工作微信会话'}];
+   if(delayed)return new Promise(resolve=>{finish=resolve;});
+   return [{thread_id:'personal-thread',title:'个人会话'}];
+  }
+  return {connected:true};
+ });
+ render(<App/>);await screen.findByRole('button',{name:'个人会话'});
+ delayed=true;fireEvent(window,new Event('focus'));
+ fireEvent.click(screen.getByRole('button',{name:'当前角色：个人，切换或创建角色'}));
+ fireEvent.click(within(screen.getByRole('dialog',{name:'我的角色'})).getByRole('button',{name:/工作语境/}));
+ await screen.findByRole('button',{name:'工作微信会话'});
+ await act(async()=>finish([{thread_id:'late',title:'迟到的个人微信'}]));
+ expect(screen.queryByRole('button',{name:'迟到的个人微信'})).not.toBeInTheDocument();
+ expect(screen.getByRole('button',{name:'工作微信会话'})).toBeVisible();
+});
+
+it('shows channel provenance in the history list and active conversation',async()=>{
+ mocked.mockImplementation(async path=>path==='/me'?user:path==='/threads'?[{thread_id:'wx',title:'来自手机',channel_type:'weixin'},{thread_id:'web',title:'本机交流',channel_type:'dashboard'}]:{connected:true});
+ render(<App/>);
+ const wx=await screen.findByRole('button',{name:'来自手机'});
+ expect(screen.getByRole('button',{name:'本机交流'})).toBeVisible();
+ fireEvent.click(wx);
+ expect(screen.getAllByTitle('对话来源：微信')).toHaveLength(2);
+});
+it('loads existing care preference without writing, then saves a selected level',async()=>{
+ const config={enabled:true,active_hours_start:'09:00',active_hours_end:'22:00',min_interval_hours:5,max_interval_hours:24};
+ mocked.mockImplementation(async(path,method)=>path==='/wechat'?[]:path==='/wechat/care'?method==='PUT'?{...config,min_interval_hours:48,max_interval_hours:72}:config:{});
+ render(<Settings user={user} roleName="工作" onUser={()=>{}} onLogout={()=>{}}/>);
+ fireEvent.click(screen.getByRole('button',{name:'微信连接'}));
+ expect(await screen.findByText(/沿用现有设置/)).toBeVisible();
+ expect(mocked.mock.calls.some(([,method])=>method==='PUT')).toBe(false);
+ fireEvent.click(screen.getByRole('radio',{name:/偶尔关心/}));
+ fireEvent.click(screen.getByRole('button',{name:'保存联系偏好'}));
+ expect(await screen.findByText('已保存，当前角色的主动关心安排已更新。')).toBeVisible();
+ expect(mocked).toHaveBeenCalledWith('/wechat/care','PUT',{level:'gentle',start:'09:00',end:'22:00'});
 });

@@ -23,6 +23,12 @@ function verifyFolder(folder,prefix,filter=()=>true,relative=''){
 verifyFolder(path.resolve('../dist'),'renderer');
 verifyFolder(path.resolve('../server'),'server',f=>f.endsWith('.mjs')&&!['index.mjs','desktop-service.mjs'].includes(f));
 assert.equal(JSON.parse(extract('package.json')).version,packageVersion);
+const rendererJs=files.map(f=>f.replaceAll('\\','/')).filter(f=>/renderer\/assets\/.*\.js$/.test(f)).map(f=>extract(f.replace(/^\//,'')).toString()).join('\n');
+for(const label of ['设置中心','希望知君多主动一些','保存联系偏好','对话来源'])assert(rendererJs.includes(label),'Latest UI missing: '+label);
+const appServer=extract('server/app.mjs').toString();
+assert(appServer.includes('/api/wechat/care'),'Care route missing from package');
+assert(appServer.includes('WECHAT_OWNER_UNVERIFIED'),'Owner verification missing from package');
+
 function pe(file){
  const b=fs.readFileSync(file),off=b.readUInt32LE(0x3c),magic=b.readUInt16LE(off+24),dir=off+24+(magic===0x20b?112:96),certOffset=b.readUInt32LE(dir+32),certSize=b.readUInt32LE(dir+36);
  assert.equal(b.toString('ascii',off,off+4),'PE\0\0');

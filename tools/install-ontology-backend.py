@@ -1,12 +1,19 @@
 """Install the reviewed local backend overlay; retain exact originals for rollback."""
 from pathlib import Path
-import hashlib,json,shutil,sys,datetime,py_compile
+import hashlib,json,shutil,sys,datetime,py_compile,argparse
 root=Path(__file__).resolve().parents[1]
 source=root/'backend-overlay'/'octop'
-target=Path(sys.argv[1]) if len(sys.argv)>1 else Path.home()/'.octop/portable/packages/octop'
+parser=argparse.ArgumentParser()
+parser.add_argument('target',nargs='?',default=str(Path.home()/'.octop/portable/packages/octop'))
+parser.add_argument('--only',action='append',default=[],help='Install only these reviewed relative overlay files')
+args=parser.parse_args()
+target=Path(args.target)
 files=list(source.rglob('*.py'))
 manifest_path=root/'backend-overlay/manifest.json'
 spec=json.loads(manifest_path.read_text())
+if args.only:
+ if not set(args.only).issubset(spec['files']):raise SystemExit('Unknown overlay path')
+ files=[p for p in files if str(p.relative_to(source)) in args.only]
 sha=lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
 for rel,expected in spec['dependencies'].items():
  p=target/rel

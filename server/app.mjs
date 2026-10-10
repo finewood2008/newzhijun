@@ -215,9 +215,21 @@ export function createApp(rawConfig, {fetcher = fetch, staticDir = resolve('dist
           const d=suffix.match(/^documents\/([\w-]+)(?:\/(preview|reindex))?$/);
           if(d && ((method==='GET'&&d[2]==='preview')||(method==='POST'&&d[2]==='reindex')||(method==='DELETE'&&!d[2]))) return json(res,await upstream(`${basePath(bid)}/documents/${id(d[1])}${d[2]?'/'+d[2]:''}`,s,method,method==='POST'?{}:undefined));
         }
+        if(path==='/api/wechat/care' && ['GET','PUT'].includes(method)) {
+          let value;
+          if(method==='PUT') {
+            const presets={off:[5,24],gentle:[48,72],balanced:[12,24],close:[5,12]};
+            if(!Object.hasOwn(presets,body.level))fail(400,'INVALID_CARE','请选择主动联系程度。');
+            const validTime=x=>typeof x==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(x);
+            if(!validTime(body.start)||!validTime(body.end)||body.start>=body.end)fail(400,'INVALID_HOURS','联系时段的结束时间需晚于开始时间。');
+            const [min,max]=presets[body.level];
+            value={enabled:body.level!=='off',active_hours_start:body.start,active_hours_end:body.end,min_interval_hours:min,max_interval_hours:max};
+          }
+          return json(res,await upstream(`${root}/proactive-care`,s,method,value));
+        }
         if(path==='/api/wechat' && method==='GET') {
           const c=await upstream(`${root}/channels`,s);
-          return json(res,c.filter(c=>c.kind==='weixin').map(c=>({id:c.id,enabled:c.enabled,status:c.runtime?.status||'unknown'})));
+          return json(res,c.filter(c=>c.kind==='weixin').map(c=>({id:c.id,enabled:c.enabled,status:c.runtime?.status||'unknown',ownerVerified:c.owner_verified===true})));
         }
         if(path==='/api/wechat/qr' && method==='POST') {
           const q=await upstream(`${root}/channels/weixin/qrcode/generate`,s,'POST',{});
@@ -231,21 +243,19 @@ export function createApp(rawConfig, {fetcher = fetch, staticDir = resolve('dist
           try {
             const q=await upstream(`${root}/channels/weixin/qrcode/poll`,s,'POST',{qrcode_token:s.qr.token});
             if(q.status==='success') {
-              if(q.token&&q.account_id) {
-                const existing=(await upstream(`${root}/channels`,s)).filter(c=>c.kind==='weixin');
-                const channel={kind:'weixin',name:'知君微信',config:{accounts:[{account_id:q.account_id,token:q.token,base_url:q.base_url||'https://ilinkai.weixin.qq.com',bot_uin:q.account_id}],bot_uin:q.account_id,token:q.token,base_url:q.base_url||'https://ilinkai.weixin.qq.com'}};
-                if(existing.length) await upstream(`${root}/channels/${id(existing[0].id)}`,s,'PATCH',{config:channel.config,enabled:true});
-                else await upstream(`${root}/channels`,s,'POST',channel);
-              }
+              if(!q.channel_id) fail(409,'WECHAT_OWNER_UNVERIFIED','万象尚未完成微信本人身份绑定，请更新后端后重新扫码。');
+              const bound=(await upstream(`${root}/channels`,s)).find(c=>c.id===q.channel_id&&c.kind==='weixin'&&c.owner_verified===true);
+              if(!bound) fail(409,'WECHAT_OWNER_UNVERIFIED','未确认当前角色的微信本人身份，请重新扫码。');
               s.qr.bound=true;
             }
-            return json(res,{status:q.status});
+            return json(res,{status:q.status,...(q.status==='error'?{message:q.message||'微信绑定未完成，请重新扫码。'}:{})});
           } finally {s.qrBusy=false;}
         }
         m=path.match(/^\/api\/wechat\/([\w-]+)$/);
         if(m&&method==='PATCH') {
           const c=(await upstream(`${root}/channels`,s)).find(c=>c.id===m[1]&&c.kind==='weixin');
           if(!c) fail(404,'NOT_FOUND','未找到微信连接。');
+          if(body.enabled&&c.owner_verified!==true)fail(409,'WECHAT_OWNER_UNVERIFIED','请重新扫码确认本人身份后启用微信。');
           await upstream(`${root}/channels/${id(m[1])}`,s,'PATCH',{enabled:!!body.enabled});return json(res,{ok:true});
         }
         fail(404,'NOT_FOUND','此功能暂不可用。');
