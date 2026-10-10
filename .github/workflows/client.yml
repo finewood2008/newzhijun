@@ -35,7 +35,7 @@ jobs:
       - run: node --test desktop/tests/direct-runtime.test.cjs
       - run: npm run build
       - run: node tools/prepare-desktop.mjs
-      - run: npm --prefix desktop run package:win -- --dir --publish never
+      - run: npm --prefix desktop run package:win -- --publish never
       - name: Check the actual Windows application startup
         run: node desktop/tools/smoke-window.mjs "desktop/release/win-unpacked/知君.exe"
       - uses: actions/upload-artifact@v4
@@ -43,3 +43,12 @@ jobs:
         with:
           name: windows-direct-client-check
           path: verification/desktop-direct/
+      - name: Audit installer and bundled sources
+        run: node desktop/tools/audit-win.cjs > verification/desktop-direct/package-audit.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            desktop/release/Zhijun-Setup-*-x64.exe
+            verification/desktop-direct/package-audit.json
+          if-no-files-found: error
