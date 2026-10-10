@@ -9,7 +9,7 @@ export function Login({onSuccess}:{onSuccess:()=>void}) {
   const [server,setServer]=useState<{name:string;endpoint:string}|null>(null);
   useEffect(()=>{const c=new AbortController();api('/connection','GET',undefined,c.signal).then(setServer).catch(()=>{});return()=>c.abort()},[]);
   const [username,setUsername]=useState(''), [password,setPassword]=useState('');
-  const [captcha,setCaptcha]=useState<PublicCaptchaConfig|null>(null);
+  const [captcha,setCaptcha]=useState<(PublicCaptchaConfig&{connectionRequired?:boolean})|null>(null);
   const [ready,setReady]=useState(false), [busy,setBusy]=useState(false);
   const [error,setError]=useState(''), [reset,setReset]=useState(0), [attempt,setAttempt]=useState(0);
   const [loading,setLoading]=useState(true);
@@ -18,8 +18,8 @@ export function Login({onSuccess}:{onSuccess:()=>void}) {
   useEffect(()=>{
     const controller=new AbortController();
     setLoading(true);setError('');setCaptcha(null);setReady(false);
-    api<PublicCaptchaConfig>('/captcha','GET',undefined,controller.signal)
-      .then(config=>{setCaptcha(config);if(config.provider==='slider'||config.provider==='none')setReady(true)}).catch(e=>{if(!controller.signal.aborted)setError(e.message);})
+    api<PublicCaptchaConfig&{connectionRequired?:boolean}>('/captcha','GET',undefined,controller.signal)
+      .then(config=>{setCaptcha(config);if(!config.connectionRequired&&(config.provider==='slider'||config.provider==='none'))setReady(true)}).catch(e=>{if(!controller.signal.aborted)setError(e.message);})
       .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
   },[attempt]);
@@ -48,6 +48,7 @@ export function Login({onSuccess}:{onSuccess:()=>void}) {
             {!loading&&!captcha&&<button type="button" onClick={()=>setAttempt(x=>x+1)}><RefreshCw size={15}/>重新连接</button>}
           </div>
           {error&&<p className="notice" role="alert">{error}</p>}
+          {captcha?.connectionRequired&&<p className="quiet">先在右下角“连接服务”中选择你的万象WANX，再登录。</p>}
           <button className="primary login-submit" disabled={busy||!ready||!username.trim()||!password}>{busy?'正在登录…':'进入知君'}<ArrowRight size={17}/></button>
         </form>
         <p className="login-privacy">属于你的对话，留在你的私人空间。</p>

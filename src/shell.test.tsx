@@ -39,6 +39,26 @@ it('enters a single automatically matched expert with no expert picker',async()=
  expect(await screen.findByRole('button',{name:'测试者，私人空间与设置'})).toBeVisible();
  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
  expect(screen.queryByText('选择我的知君实例')).not.toBeInTheDocument();
+ expect(screen.queryByRole('button',{name:'连接服务，搜索或切换 万象WANX'})).not.toBeInTheDocument();
+});
+
+it('shows the new login and corner connection entry on a fresh desktop, with no legacy pairing screen',async()=>{
+ mocked.mockImplementation(async path=>{
+  if(path==='/me'){await Promise.resolve();window.dispatchEvent(new Event('session-expired'));throw new Error('请登录');}
+  if(path==='/captcha')return {provider:'none',connectionRequired:true};
+  if(path==='/connection')return {scope:'client-lan',selected:false};
+  return {connected:false,needsConnection:true};
+ });
+ render(<App/>);
+ expect(await screen.findByRole('form',{name:'登录知君'})).toBeVisible();
+ expect(await screen.findByText('先在右下角“连接服务”中选择你的万象WANX，再登录。')).toBeVisible();
+ expect(screen.getByRole('button',{name:'进入知君'})).toBeDisabled();
+ expect(screen.queryByText('家里的知君')).not.toBeInTheDocument();
+ expect(screen.queryByText('配对码')).not.toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button',{name:'连接服务，搜索或切换 万象WANX'}));
+ expect(await screen.findByText(/搜索这台电脑所在的局域网/)).toBeVisible();
+ expect(screen.getByRole('button',{name:'搜索 万象WANX'})).toBeVisible();
+ expect(screen.getByLabelText('手动输入地址')).toBeVisible();
 });
 
 it('keeps the login form hidden while restoring an existing session',async()=>{

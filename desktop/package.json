@@ -1,7 +1,7 @@
 {
   "name": "zhijun-desktop",
   "productName": "知君",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "license": "UNLICENSED",
   "description": "知君私人空间桌面客户端",
@@ -27,9 +27,11 @@
       "output": "release"
     },
     "files": [
-      "shell/**",
+      "shell/main.cjs",
+      "shell/runtime.cjs",
+      "shell/session-store.cjs",
+      "server/**",
       "renderer/**",
-      "resources/server-profile.json",
       "package.json",
       "THIRD_PARTY_NOTICES.md",
       "resources/icon.*"
@@ -46,21 +48,7 @@
       ],
       "signAndEditExecutable": false,
       "artifactName": "Zhijun-Setup-${version}-${arch}.${ext}",
-      "icon": "resources/icon.ico",
-      "extraResources": [
-        {
-          "from": "../remote-connect/bin/wanx-link-win32-amd64.exe",
-          "to": "bin/wanx-link-win32-amd64.exe"
-        },
-        {
-          "from": "../remote-connect/THIRD_PARTY_NOTICES.md",
-          "to": "remote-connect/THIRD_PARTY_NOTICES.md"
-        },
-        {
-          "from": "../remote-connect/licenses",
-          "to": "remote-connect/licenses"
-        }
-      ]
+      "icon": "resources/icon.ico"
     },
     "nsis": {
       "oneClick": false,

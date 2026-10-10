@@ -9,8 +9,8 @@ import {ontologyRoute} from './ontology.mjs';
 import http from 'node:http';
 import { createProvisioner } from './provision.mjs';
 import { randomBytes } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { resolve, extname } from 'node:path';
+import { resolve } from 'node:path';
+import {serveStatic} from './static.mjs';
 import { WebSocketServer, WebSocket } from 'ws';
 import { ClientError, fail, id, bindingFor, assertPrivateAgent, assertPrivateBase, chatFrame, projectThread, projectHistory, validateConfig } from './policy.mjs';
 
@@ -250,12 +250,7 @@ export function createApp(rawConfig, {fetcher = fetch, staticDir = resolve('dist
         }
         fail(404,'NOT_FOUND','此功能暂不可用。');
       }
-      if(method!=='GET') fail(405,'NOT_ALLOWED','操作不支持。');
-      const target=path==='/'?'index.html':path.replace(/^\//,'');
-      const file=resolve(staticDir,target);
-      if(!file.startsWith(staticDir+'/')) fail(404,'NOT_FOUND','未找到页面。');
-      let bytes; try{bytes=await readFile(file);}catch{fail(404,'NOT_FOUND','未找到页面。');}
-      res.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'})[extname(file)]||'application/octet-stream');res.end(bytes);
+      await serveStatic(req,res,staticDir,path);
     } catch(e) { if(!res.headersSent) json(res,{code:e instanceof ClientError?e.code:'SERVICE_ERROR',message:e instanceof ClientError?e.message:'服务暂时不可用，请稍后重试。'},e instanceof ClientError?e.status:500);else res.end(); }
   });
   const wss=new WebSocketServer({noServer:true,maxPayload:128*1024});

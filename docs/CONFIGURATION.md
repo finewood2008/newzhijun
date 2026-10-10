@@ -27,10 +27,14 @@
 }
 ```
 
-桌面配对配置 `desktop/resources/server-profile.json` 为本机生成文件，不入库。macOS 服务准备工具生成本机证书与配对信息；其他平台需要按自己的设备生成，不能复用他人的配对配置。
+Windows 0.4.2 起在客户端直接发现、连接 WANX，不读取 Web 服务的 `deployment.json`，也不读取旧 `desktop/resources/server-profile.json`。旧配置保留用于原部署，不进入新安装包。
 
 ## 桌面资源
 
-先生成本机 `desktop/resources/server-profile.json`（包含设备公钥、固定证书指纹和地址；不得复用其他人的私钥），再执行 `npm run build`、`node tools/prepare-desktop.mjs`。桌面开发使用 `npm --prefix desktop ci` 后启动。远程组件按 `remote-connect/README.md` 构建对应平台的二进制，随后在 `desktop/` 执行打包命令。仓库仅提交源码，不包含配对文件和安装包。
+执行 `npm run build`、`node tools/prepare-desktop.mjs`，准备同一套前端与直连适配代码。桌面开发使用 `npm --prefix desktop ci` 后启动；在 `desktop/` 执行 `npm run package:win -- --publish never` 生成安装包。无需构建旧远程网络进程。跨平台打包时可以用 `--config.directories.output=/本机临时目录` 避开云盘文件系统的写入限制。
 
-当 Web 与桌面 HTTPS 网关同时运行时，将两份私有 deployment.json 的 `roleStore` 配为同一个绝对目录。两个入口将实时读取同一份角色目录；账户会话仍按入口独立保存。该本地 JSON 目录适用于单机部署，不作为多服务器事务存储。
+桌面进程只监听本机 loopback 随机端口。服务地址、角色索引和加密会话位于原用户目录下新的 `direct-wanx/`；Windows 会话使用系统安全存储加密，不写入本地明文令牌或密码。安全存储不可用时会话只保留在内存，下次需重新登录。旧 `connection.enc` 和远程配对目录不会被导入、修改或删除。
+
+升级 0.4.2 首次需重新选择 WANX 并登录。旧网关本地维护的角色索引不会自动迁入新客户端，服务器上的原有专家实例与数据保留；不要删除或覆盖旧目录来排查连接问题。
+
+旧 Web 与旧桌面 HTTPS 网关同时运行时，可将两份私有 deployment.json 的 `roleStore` 配为同一个绝对目录。这仅适用于旧网关部署；0.4.2 直连客户端不依赖它。角色索引的本地 JSON 目录不作为多服务器事务存储。

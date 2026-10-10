@@ -11,6 +11,7 @@ deployment.before-*.json
 verification/
 delivery/
 desktop/renderer/
+desktop/server/
 desktop/release/
 desktop/resources/server-profile.json
 **/__pycache__/

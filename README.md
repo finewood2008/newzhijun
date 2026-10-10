@@ -15,7 +15,7 @@
 - 本体只在本人确认后进入可用上下文；当前角色已确认事实的来源变更、失效或撤回确认，会使依赖它的理解退出可用上下文。
 - 对话在 WANX 模型调用前选择当前角色的有效本体，遵守当下表达优先；可查看本次参考内容、下一轮排除某项或停止以后使用。资料解释要求先忠实于原文，再讨论与本人的关联。
 - 默认私人知识库、多文件上传、状态与预览；微信连接与角色记忆整理设置。
-- `desktop/` 保留 Electron 客户端源码，`remote-connect/` 为配套连接服务源码。当前验收入口是 Web 客户端；桌面安装包需单独构建与验收。
+- Windows 0.4.2 桌面端直接显示同一登录页，在本机局域网发现并连接 WANX；安装包不再绑定家庭服务器，也不包含旧配对页。`remote-connect/` 保留旧部署的服务源码，不再随桌面安装包分发。
 
 ## 快速启动
 
@@ -30,6 +30,8 @@ npm start
 ```
 
 默认访问 `http://127.0.0.1:28730`。现有机器不要用示例覆盖自己的 `deployment.json`。
+
+桌面端构建：`npm --prefix desktop ci` → `npm run build` → `node tools/prepare-desktop.mjs` → `npm --prefix desktop run package:win -- --publish never`。桌面端不需要 `deployment.json` 或 `server-profile.json`，首次使用在登录页右下角选择 WANX；对话、记忆与知识库仍保存在所选 WANX。
 
 开发入口 `npm run dev` 使用 28731；API 服务使用 `ZHIJUN_PUBLIC_ORIGIN=http://127.0.0.1:28731 npm start`，Vite 代理 HTTP 与 WebSocket。
 

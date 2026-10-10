@@ -19,3 +19,27 @@ jobs:
       - run: npm test
       - run: npm run test:ui
       - run: npm run build
+  windows-direct-client:
+    runs-on: windows-latest
+    env:
+      NODE_OPTIONS: --no-experimental-webstorage
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix desktop ci
+      - run: node --test desktop/tests/direct-runtime.test.cjs
+      - run: npm run build
+      - run: node tools/prepare-desktop.mjs
+      - run: npm --prefix desktop run package:win -- --dir --publish never
+      - name: Check the actual Windows application startup
+        run: node desktop/tools/smoke-window.mjs "desktop/release/win-unpacked/知君.exe"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-direct-client-check
+          path: verification/desktop-direct/
