@@ -1,3 +1,4 @@
+import {version} from '../package.json';
 import {UserRound,Type,Brain,BookOpen,MessageCircle,ArrowUpRight,LogOut,ShieldCheck} from 'lucide-react';
 import {Memory} from './Memory';
 import {useEffect,useRef,useState} from 'react';import {QRCodeSVG} from 'qrcode.react';import {api,User} from './api';
@@ -15,7 +16,7 @@ export function Settings({user,roleName,onUser,onLogout}:{user:User;roleName:str
   <div className="settings-layout">
    <nav className="settings-nav" aria-label="设置分类">
     {categories.map(({id,label,icon:Icon},index)=><button key={id} className={(tab===id?'is-selected ':'')+(index===2?'role-category-start':'')} aria-current={tab===id?'page':undefined} onClick={()=>{if(tab==='wechat'){poll.current?.abort();setQr('');}setTab(id);}}><Icon size={17}/><span>{label}</span></button>)}
-    <p className="settings-version">知君 · 测试版 0.1.0</p>
+    <p className="settings-version">知君 · 测试版 {version}</p>
    </nav>
    <section className="settings-content" aria-label={current.label}>
     <header className="settings-section-heading"><div><h2>{current.label}</h2><p>{current.description}</p></div><span className="settings-scope">{scoped?`当前角色：${roleName}`:tab==='appearance'?'这台设备':'你的账户'}</span></header>

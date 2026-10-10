@@ -4,7 +4,7 @@ import {useEffect,useRef,useState} from 'react';
 import {ArrowUp,Square,RefreshCw,Paperclip,X,FileText} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import {api,textContent,streamApproval,getActiveRole} from './api';
+import {api,textContent,streamApproval,getActiveExpert,getActiveRole} from './api';
 type Message={role:string;content:unknown;inbound_attachments?:{filename:string;media_type?:string}[]};
 export function Chat({thread,onChanged}:{thread:string;onChanged:()=>void}){
  const [contextRevision,setContextRevision]=useState(0);
@@ -23,12 +23,12 @@ export function Chat({thread,onChanged}:{thread:string;onChanged:()=>void}){
  useEffect(()=>{
   let alive=true;const abort=new AbortController();let retry:ReturnType<typeof setTimeout>;
   setError('');setPending(null);setReady(false);setBusy(false);busyRef.current=false;setLoading(true);hasToken.current=false;streaming.current=false;
-  const socket=new WebSocket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}/api/chat?role=${encodeURIComponent(getActiveRole())}`);wsRef.current=socket;
+  const socket=new WebSocket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}/api/chat?role=${encodeURIComponent(getActiveRole())}&expert=${encodeURIComponent(getActiveExpert())}`);wsRef.current=socket;
   let socketReady=false,historyReady=false;
-  const subscribe=()=>{if(socketReady&&historyReady)socket.send(JSON.stringify({type:'subscribe',thread_id:thread}));};
+  const subscribe=()=>{if(socketReady&&historyReady){socket.send(JSON.stringify({type:'subscribe',thread_id:thread}));setReady(true);}};
   async function history(){try{const h=await api('/threads/'+encodeURIComponent(thread)+'/history','GET',undefined,abort.signal);if(!alive)return;if(h.history_loading){retry=setTimeout(history,1500);return;}setMessages(h.messages);setMore(h.has_more);cursor.current=h.next_cursor;count.current=h.next_offset;setPending(h.hitl_pending?.request||h.hitl_pending);setBusy(h.turn_active);busyRef.current=!!h.turn_active;streaming.current=!!h.turn_active;hasToken.current=!!h.turn_active&&h.messages.at(-1)?.role==='assistant';setLoading(false);historyReady=true;subscribe();}catch(e){if(alive){setLoading(false);setError((e as Error).message);}}}
   void history();
-  socket.onmessage=e=>{if(!alive)return;const f=JSON.parse(e.data);if(f.type==='ready'){socketReady=true;reconnectAttempt.current=0;setReady(true);subscribe();}else apply(f);};
+  socket.onmessage=e=>{if(!alive)return;let f;try{f=JSON.parse(e.data);if(!f||typeof f!=='object'||typeof f.type!=='string')throw new Error('invalid frame');}catch{setError('回复格式异常，请刷新记录并重连。');return;}if(f.type==='ready'){socketReady=true;reconnectAttempt.current=0;subscribe();}else apply(f);};
   socket.onclose=()=>{if(alive){setReady(false);setBusy(false);busyRef.current=false;setError('连接已断开，正在自动重连。恢复后会核对已保存记录，不会重复发送。');const delay=Math.min(30000,1000*2**Math.min(reconnectAttempt.current++,5))+Math.random()*500;retryTimer.current=setTimeout(()=>{if(alive)setRevision(x=>x+1)},delay);}};
   socket.onerror=()=>{if(alive)setError('暂时连接不上对话服务。');};
   const online=()=>{if(alive)setRevision(x=>x+1)};window.addEventListener('online',online);return()=>{alive=false;if(retryTimer.current)clearTimeout(retryTimer.current);window.removeEventListener('online',online);abort.abort();clearTimeout(retry);approval.current?.abort();socket.close();wsRef.current=null;};

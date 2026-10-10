@@ -66,3 +66,29 @@ test('local web and desktop gateways read newly added roles from one shared regi
  const path=mkdtempSync(join(tmpdir(),'zhijun-shared-roles-'));
  try{const web=createRoleStore(path),desktop=createRoleStore(path);web.set(4,[{id:'work',ready:true}]);assert.equal(desktop.get(4)[0].id,'work');desktop.set(4,[{id:'personal-project',ready:true}]);assert.deepEqual(web.get(4).map(r=>r.id),['work','personal-project']);}finally{rmSync(path,{recursive:true,force:true});}
 });
+
+test('an owned selected expert supplies behaviour while WANX assigns fresh role workspaces',async()=>{
+ const store=createRoleStore(),calls=[],agents=new Map(),bases=[];
+ const source={agent_id:'selected',user_id:4,is_shared:false,default_model:'same-model'};
+ const upstream=async(path,s,method='GET',body)=>{
+  calls.push({path,method,body});
+  if(path==='/agents/selected')return source;
+  if(path==='/agents/selected/workspace/file?path=AGENTS.md')return {content:'Expert behaviour only'};
+  if(path==='/agents/from-expert/default'){const a={agent_id:body.agent_id,user_id:4,is_shared:false};agents.set(a.agent_id,a);return a;}
+  if(path.endsWith('/memory/extract-config'))return {};
+  if(path.startsWith('/agents/')){const a=agents.get(path.split('/')[2]);if(!a)throw Object.assign(new Error('missing'),{status:404});return a;}
+  if(path==='/knowledge-bases'){if(method==='POST'){const b={id:'kb-'+bases.length,owner_user_id:4,...body};bases.push(b);return b;}return bases;}
+  throw new Error('Unexpected request '+path);
+ };
+ const roles=createRoles({bindings:{4:{agentId:'selected'}},provisioning:{4:{sourceAgentId:'selected'}}},upstream,store,async()=>({id:'original'}));
+ assert.equal(roles.canCreate(session.user),true);
+ const work=await roles.create(session,request),writing=await roles.create(session,{...request,name:'写作',requestId:'another_request_123'});
+ assert.notEqual(roles.resolve(session.user,work.id).agentId,roles.resolve(session.user,writing.id).agentId);
+ assert.notEqual(roles.resolve(session.user,work.id).libraryId,roles.resolve(session.user,writing.id).libraryId);
+ for(const call of calls.filter(c=>c.path==='/agents/from-expert/default')){
+  assert.deepEqual(call.body.backend,{type:'filesystem',virtual_mode:true});
+  assert.match(call.body.file_overrides[0].content,/Expert behaviour only/);
+  assert.deepEqual(call.body.knowledge_base_ids,[]);
+ }
+ assert.equal(calls.filter(c=>c.path.includes('/workspace/')).every(c=>c.path.endsWith('file?path=AGENTS.md')),true);
+});

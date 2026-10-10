@@ -18,11 +18,12 @@ async function createGateway({directory,connection,vault,remote}){
    if(!connection.endpoint)return failure(res,503,'服务器暂时离线，正在自动重新连接。');
    const headers={'x-zhijun-client':'desktop-v1',Origin:'zhijun://desktop',Accept:req.headers.accept||'application/json'};
    if(req.headers['x-zhijun-role'])headers['X-Zhijun-Role']=req.headers['x-zhijun-role'];
+   if(req.headers['x-zhijun-expert'])headers['X-Zhijun-Expert']=req.headers['x-zhijun-expert'];
    if(vault.cookie)headers.Cookie=vault.cookie;if(req.headers['content-type'])headers['Content-Type']=req.headers['content-type'];
    const upstream=https.request(new URL(req.url,connection.endpoint),{...connection.options,method:req.method,headers},response=>{
     const cookies=response.headers['set-cookie'];
-    if(cookies){const session=cookies.find(c=>c.startsWith('zhijun_session='));if(session){vault.cookie=session.split(';')[0];if(vault.cookie==='zhijun_session=')vault.cookie='';void vault.save();}}
-    if(response.statusCode===401){vault.cookie='';void vault.save();}
+    if(cookies){const jar=new Map(String(vault.cookie||'').split(';').map(c=>c.trim()).filter(Boolean).map(c=>{const i=c.indexOf('=');return [c.slice(0,i),c.slice(i+1)]}));for(const cookie of cookies){const pair=cookie.split(';')[0],i=pair.indexOf('='),name=pair.slice(0,i),value=pair.slice(i+1);if(!['zhijun_session','zhijun_backend'].includes(name))continue;if(value)jar.set(name,value);else jar.delete(name);}vault.cookie=[...jar].map(([k,v])=>k+'='+v).join('; ');void vault.save();}
+    if(response.statusCode===401){vault.cookie=String(vault.cookie||'').split(';').map(c=>c.trim()).filter(c=>c.startsWith('zhijun_backend=')).join('; ');void vault.save();}
     const out={...response.headers};delete out['set-cookie'];delete out['content-security-policy'];delete out['access-control-allow-origin'];res.writeHead(response.statusCode||502,out);response.pipe(res);
    });
    upstream.setTimeout(300000,()=>upstream.destroy());upstream.on('error',()=>{if(!res.headersSent)failure(res,503,'连接暂时中断，正在自动重新连接。');else res.end();void connection.check()});req.on('aborted',()=>upstream.destroy());req.pipe(upstream);return;

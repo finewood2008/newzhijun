@@ -1,4 +1,7 @@
+import {readFileSync} from 'node:fs';
+const {version}=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
 import {createRoles, createRoleStore} from './roles.mjs';
+import {createExpertSelection,defaultZhijunExpert} from './expert-selection.mjs';
 import {createDefaultLibrary} from './library.mjs';
 import {singleUpload,sealAttachment,resolveAttachments} from './attachments.mjs';
 import {memoryRoute,memoryResult} from './memory.mjs';
@@ -11,11 +14,12 @@ import { resolve, extname } from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { ClientError, fail, id, bindingFor, assertPrivateAgent, assertPrivateBase, chatFrame, projectThread, projectHistory, validateConfig } from './policy.mjs';
 
-export function createApp(rawConfig, {fetcher = fetch, staticDir = resolve('dist'), sessionStore = null, roleStore = createRoleStore()} = {}) {
+export function createApp(rawConfig, {fetcher = fetch, staticDir = resolve('dist'), sessionStore = null, roleStore = createRoleStore(), sessionCookieName = 'zhijun_session', allowAgentSelection = false} = {}) {
   const config = validateConfig(rawConfig), sessions = new Map();
   for(const s of sessionStore?.load()||[])sessions.set(s.sid,{...s,sockets:new Set(),qr:null,qrBusy:false});
   const saveSessions=()=>sessionStore?.save(sessions);
-  const cookieName = 'zhijun_session';
+  if(!/^[A-Za-z0-9_]{1,64}$/.test(sessionCookieName))throw new Error('Invalid session cookie name');
+  const cookieName = sessionCookieName;
   function drop(s) { for (const ws of s.sockets) ws.close(4001, '会话已结束'); sessions.delete(s.sid); saveSessions(); }
   async function upstream(path, session, method='GET', body, contentType='application/json', responseFormat='json') {
     let r;
@@ -38,19 +42,47 @@ export function createApp(rawConfig, {fetcher = fetch, staticDir = resolve('dist
   async function privateAgent(s, roleId = "personal") {
     const user = await upstream('/auth/me',s);
     if (user.id !== s.user.id) { drop(s); fail(401,'LOGIN_REQUIRED','请重新登录。'); }
-    const aid = roles.resolve(user, roleId).agentId, agent = await upstream(`/agents/${aid}`,s);
+    const aid = rolesFor(s).resolve(user, roleId).agentId, agent = await upstream(`/agents/${aid}`,s);
     assertPrivateAgent(agent,user,aid);
     return aid;
   }
   const basePath = b => `/knowledge-bases/${id(b)}`;
   async function privateBase(s, bid, role) {
-    if ((await roles.library(s, role)).id !== bid) fail(403, 'ROLE_LIBRARY_REQUIRED', '这份资料不属于当前角色。');
+    if ((await rolesFor(s).library(s, role)).id !== bid) fail(403, 'ROLE_LIBRARY_REQUIRED', '这份资料不属于当前角色。');
     return assertPrivateBase(await upstream(basePath(bid),s),s.user);
   }
   const defaultLibrary=createDefaultLibrary(upstream,config);
   const roles = createRoles(config, upstream, roleStore, defaultLibrary);
+  const expertContexts = new Map();
+  const experts=createExpertSelection(config,upstream,roleStore);
+  function selectExpert(s,selection) {
+    for(const ws of s.sockets)ws.close(4002,'已切换知君专家');
+    const next={...s,...selection,sockets:new Set(),qr:null,qrBusy:false};
+    sessions.set(s.sid,next);saveSessions();return next;
+  }
+  const expertId = s => s.agentId || config.bindings[String(s.user.id)]?.agentId || null;
+  function rolesFor(s) {
+    const uid=String(s.user.id), aid=expertId(s);
+    const configured=aid===config.bindings[uid]?.agentId;
+    if(!aid || configured&&(config.provisioning?.[uid]||!s.sourceExpertId))return roles;
+    const key=uid+':'+aid;
+    if(!expertContexts.has(key)) {
+      const existingRole=roleStore.get(uid).find(r=>r.agentId===aid&&r.ready);
+      const sourceAgentId=s.sourceExpertId||aid;
+      const template=Object.values(config.provisioning||{}).find(p=>p.sourceAgentId===sourceAgentId);
+      const scoped={...config,bindings:{[uid]:configured?config.bindings[uid]:{agentId:aid,...(existingRole?.libraryId?{libraryId:existingRole.libraryId}:{libraryName:'知君 · 专家资料 · '+aid})}},provisioning:{[uid]:{sourceAgentId,...(template?{rules:template.rules,auxModel:template.auxModel}:{})}}};
+      const storeKey=configured?uid:key;
+      const store={get:()=>roleStore.get(storeKey),set:(_,rows)=>roleStore.set(storeKey,rows)};
+      expertContexts.set(key,createRoles(scoped,upstream,store,createDefaultLibrary(upstream,scoped)));
+    }
+    return expertContexts.get(key);
+  }
+  function assertExpertScope(s, supplied) {
+    const requested=supplied||config.bindings[String(s.user.id)]?.agentId||null;
+    if(requested!==expertId(s))fail(409,'EXPERT_CHANGED','已切换知君专家，正在刷新当前空间。');
+  }
   async function libraries(s, role) {
-    const base = await roles.library(s, role);
+    const base = await rolesFor(s).library(s, role);
     return [{...base, ...(role.id === 'personal' ? {} : {name: role.name + '的知识库'}), default_open: true}];
   }
   function sameOrigin(req) { return req.headers.origin === config.publicOrigin; }
@@ -73,7 +105,7 @@ export function createApp(rawConfig, {fetcher = fetch, staticDir = resolve('dist
         const body = method==='GET' ? {} : await readBody(req);
         if(path==='/api/status' && method==='GET') {
           let connected=false; try {await upstream('/auth/captcha'); connected=true;} catch{}
-          return json(res,{connected,version:'0.1.0',provisioned:Object.keys(config.bindings).length>0});
+          return json(res,{connected,version,provisioned:Object.keys(config.bindings).length>0});
         }
         if(path==='/api/captcha' && method==='GET') return json(res,await upstream('/auth/captcha'));
         if(path==='/api/login' && method==='POST') {
@@ -86,20 +118,47 @@ export function createApp(rawConfig, {fetcher = fetch, staticDir = resolve('dist
           res.setHeader('Set-Cookie',`${cookieName}=${sid}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ttl}${config.publicOrigin.startsWith('https:')?'; Secure':''}`);
           return json(res,{ok:true});
         }
-        const s=getSession(req);
+        let s=getSession(req);
         if(path==='/api/logout' && method==='POST') { try { await upstream('/auth/logout',s,'POST',{}); } catch {} drop(s);res.setHeader('Set-Cookie',`${cookieName}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`);return json(res,{ok:true}); }
+        if(path==='/api/connection/agents' && method==='GET') {
+          const candidates=await experts.list(s);
+          return json(res,{selectable:allowAgentSelection,currentAgentId:s.sourceExpertId||null,defaultAgentId:defaultZhijunExpert(candidates)?.id||null,agents:candidates});
+        }
+        if(path==='/api/connection/agents' && method==='POST') {
+          if(!allowAgentSelection)fail(403,'CONFIGURED_BINDING','当前服务由管理员配置个人实例。');
+          const selection=await experts.resolve(s,id(body.agentId));
+          selectExpert(s,selection);
+          return json(res,{ok:true,agentId:selection.sourceExpertId});
+        }
         if(path==='/api/me' && method==='GET') {
+          let expertChoices=[],selectionReason='';
+          if(allowAgentSelection) {
+            const candidates=await experts.list(s);
+            const chosen=candidates.find(a=>a.id===s.sourceExpertId&&a.selectable)||defaultZhijunExpert(candidates);
+            if(chosen) {
+              const selection=await experts.resolve(s,chosen.id);
+              if(s.sourceExpertId!==selection.sourceExpertId||s.agentId!==selection.agentId)s=selectExpert(s,selection);
+            } else {
+              if(s.sourceExpertId||s.agentId)s=selectExpert(s,{sourceExpertId:null,agentId:null});
+              expertChoices=candidates.filter(a=>a.selectable);
+              selectionReason=expertChoices.length?'请选择要使用的知君。':'未找到可用的知君专家，请在万象「专家 → 我的专家」中检查名称和访问权限。';
+            }
+          }
           const u=await upstream('/auth/me',s); let ready=false,reason='';
-          try {await privateAgent(s);ready=true;} catch(e) {if(e.status===401) throw e;reason=e.message;}
-          return json(res,{id:u.id,name:u.display_name||u.username,ready,reason,roles:ready?roles.list(u):[],canCreateRoles:!!config.provisioning?.[String(u.id)]});
+          if(selectionReason)reason=selectionReason;
+          else try {await privateAgent(s);ready=true;} catch(e) {if(e.status===401) throw e;reason=e.message;}
+          return json(res,{id:u.id,name:u.display_name||u.username,ready,reason,expertId:ready?expertId(s):null,expertChoices,roles:ready?rolesFor(s).list(u):[],canCreateRoles:ready&&rolesFor(s).canCreate(u)});
         }
         if(path==='/api/account' && method==='PATCH') {await upstream('/auth/me',s,'PATCH',{display_name:String(body.name||'').slice(0,100)});return json(res,{ok:true});}
         if(path==='/api/password' && method==='POST') {await upstream('/auth/change-password',s,'POST',{old_password:body.old_password,new_password:body.new_password});drop(s);return json(res,{ok:true});}
+        if(allowAgentSelection&&!s.sourceExpertId)fail(409,'EXPERT_REQUIRED','请先完成知君连接。');
         if (path === '/api/roles' && method === 'POST') {
+          assertExpertScope(s,req.headers['x-zhijun-expert']);
           await privateAgent(s);
-          return json(res, await roles.create(s, body), 201);
+          return json(res, await rolesFor(s).create(s, body), 201);
         }
-        const role = roles.resolve(s.user, req.headers['x-zhijun-role'] || 'personal');
+        assertExpertScope(s,req.headers['x-zhijun-expert']);
+        const role = rolesFor(s).resolve(s.user, req.headers['x-zhijun-role'] || 'personal');
         const aid=await privateAgent(s, role.id), root=`/agents/${aid}`;
         const ontology=ontologyRoute({path,method,body,url,aid});
         if(ontology) return json(res,await upstream(ontology.target,s,method,ontology.payload));
@@ -204,7 +263,8 @@ export function createApp(rawConfig, {fetcher = fetch, staticDir = resolve('dist
     try {
       const chatUrl = new URL(req.url, config.publicOrigin);
       if(chatUrl.pathname!=='/api/chat'||!sameOrigin(req)||req.headers.host!==new URL(config.publicOrigin).host) fail(403,'ORIGIN','');
-      const s=getSession(req),role=roles.resolve(s.user,chatUrl.searchParams.get('role')||'personal'),aid=await privateAgent(s,role.id);
+      const s=getSession(req);if(allowAgentSelection&&!s.sourceExpertId)fail(409,'EXPERT_REQUIRED','请先完成知君连接。');assertExpertScope(s,chatUrl.searchParams.get('expert'));
+      const role=rolesFor(s).resolve(s.user,chatUrl.searchParams.get('role')||'personal'),aid=await privateAgent(s,role.id);
       wss.handleUpgrade(req,socket,head,client=>{
         s.sockets.add(client);
         const u=new URL(`/api/agents/${aid}/chat/ws`,config.upstream);u.protocol=u.protocol==='https:'?'wss:':'ws:';u.searchParams.set('token',s.token);
@@ -234,5 +294,6 @@ export function createApp(rawConfig, {fetcher = fetch, staticDir = resolve('dist
   });
   const cleanup=setInterval(()=>{for(const s of sessions.values())if(Date.now()>=s.expires)drop(s);},60000);cleanup.unref();
   server.on('close',()=>{clearInterval(cleanup);saveSessions();for(const s of sessions.values())for(const ws of s.sockets)ws.close(1012,'服务正在重启');wss.close();});
+  server.revokeSession=req=>{try{drop(getSession(req));}catch{}};
   return server;
 }

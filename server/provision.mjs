@@ -1,7 +1,7 @@
 import { assertPrivateAgent, bindingFor, fail, id } from './policy.mjs';
 
-// Only operator-configured users can be provisioned. Never accept a template,
-// owner, model or workspace from a browser request.
+// Bindings are configured by the operator or resolved from an accessible
+// WANX expert. Never accept owner, model or workspace from a browser request.
 export function createProvisioner(config, upstream) {
   const inFlight = new Map();
   return async function provision(session) {
@@ -22,7 +22,10 @@ export function createProvisioner(config, upstream) {
       if (source.agent_id !== spec.sourceAgentId || source.kind === 'team' ||
           (!source.is_shared && source.user_id !== session.user.id))
         fail(403, 'TEMPLATE_UNAVAILABLE', '知君的能力配置暂不可用。');
-      if (typeof spec.rules !== 'string' || !spec.rules.trim() || typeof spec.workspaceRoot !== 'string' || !spec.workspaceRoot.startsWith('/'))
+      let rules=spec.rules;
+      if(!rules?.trim()&&Number(source.user_id)===Number(session.user.id))
+        rules=(await upstream(`/agents/${id(spec.sourceAgentId)}/workspace/file?path=AGENTS.md`,session)).content;
+      if (typeof rules !== 'string' || !rules.trim() || (spec.workspaceRoot && !spec.workspaceRoot.startsWith('/')))
         fail(409, 'TEMPLATE_UNAVAILABLE', '知君的能力配置尚未准备好。');
       // The reviewed rules contain behaviour only. No source workspace,
       // profile, memory database, knowledge bases or channel credentials copy.
@@ -31,9 +34,9 @@ export function createProvisioner(config, upstream) {
         name: '知君 · 私人空间',
         description: '基于统一知君能力配置的独立个人实例',
         default_model: source.default_model,
-        backend: {type: 'filesystem', virtual_mode: true, root_dir: spec.workspaceRoot},
+        backend: {type: 'filesystem', virtual_mode: true, ...(spec.workspaceRoot ? {root_dir: spec.workspaceRoot} : {})},
         knowledge_base_ids: [], mcp_servers: [], skill_package_ids: [],
-        file_overrides: [{name: 'AGENTS.md', content: spec.rules}],
+        file_overrides: [{name: 'AGENTS.md', content: rules}],
         welcome_message: '见字如面。今天，想从哪里说起？',
       });
       const created = await upstream(`/agents/${aid}`, session);

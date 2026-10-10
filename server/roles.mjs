@@ -35,6 +35,7 @@ export function createRoleStore(directory) {
 
 export function createRoles(config, upstream, store, defaultLibrary) {
   const pending = new Map();
+  const canCreate = user => !!config.provisioning?.[String(user.id)]?.sourceAgentId;
   function personal(user) {
     return {id: 'personal', name: '个人', description: '关于生活、感受，以及作为自己的我。', agentId: bindingFor(config, user), libraryId: config.bindings[String(user.id)]?.libraryId, ready: true};
   }
@@ -54,8 +55,10 @@ export function createRoles(config, upstream, store, defaultLibrary) {
   }
   async function create(session, body) {
     const uid = String(session.user.id), spec = config.provisioning?.[uid];
-    if (!spec?.rules?.trim() || !spec.workspaceRoot?.startsWith('/') || !spec.sourceAgentId)
+    if (!canCreate(session.user))
       fail(403, 'ROLE_CREATION_UNAVAILABLE', '当前账户尚未配置角色创建能力。');
+    if (spec.workspaceRoot && !spec.workspaceRoot.startsWith('/'))
+      fail(409, 'TEMPLATE_UNAVAILABLE', '知君的工作区配置尚未准备好。');
     if (typeof body.name !== 'string' || !body.name.trim() || body.name.trim().length > 24 ||
         typeof body.description !== 'string' || !body.description.trim() || body.description.trim().length > 1200 ||
         typeof body.requestId !== 'string' || !/^[a-zA-Z0-9_-]{16,80}$/.test(body.requestId))
@@ -78,6 +81,16 @@ export function createRoles(config, upstream, store, defaultLibrary) {
       const source = await upstream(`/agents/${id(spec.sourceAgentId)}`, session);
       if (source.agent_id !== spec.sourceAgentId || source.kind === 'team' || (!source.is_shared && Number(source.user_id) !== Number(session.user.id)))
         fail(403, 'TEMPLATE_UNAVAILABLE', '知君的能力配置暂不可用。');
+      let rules = spec.rules;
+      if (!rules?.trim()) {
+        // Only the owned expert's behaviour file is reused. Memories, profile,
+        // workspace contents and credentials are never cloned into a role.
+        if (Number(source.user_id)!==Number(session.user.id))
+          fail(403, 'TEMPLATE_UNAVAILABLE', '此专家尚未提供可复用的角色说明。');
+        rules = (await upstream(`/agents/${id(spec.sourceAgentId)}/workspace/file?path=AGENTS.md`, session)).content;
+      }
+      if (typeof rules !== 'string' || !rules.trim())
+        fail(409, 'TEMPLATE_UNAVAILABLE', '知君专家的角色说明尚未准备好，请在万象中检查。');
       if (!role) {
         const suffix = randomBytes(10).toString('hex');
         role = {id: `role_${suffix}`, agentId: `zhijun-role-${uid}-${suffix}`, name, description, requestId: body.requestId, ready: false, createdAt: new Date().toISOString()};
@@ -92,9 +105,11 @@ export function createRoles(config, upstream, store, defaultLibrary) {
         await upstream('/agents/from-expert/default', session, 'POST', {
           agent_id: role.agentId, name: `知君 · ${name}`, description,
           default_model: source.default_model,
-          backend: {type: 'filesystem', virtual_mode: true, root_dir: join(dirname(spec.workspaceRoot), role.agentId)},
+          // With no operator-supplied path, WANX assigns a fresh workspace on
+          // its own host. Never send this client's local filesystem path.
+          backend: {type: 'filesystem', virtual_mode: true, ...(spec.workspaceRoot ? {root_dir: join(dirname(spec.workspaceRoot), role.agentId)} : {})},
           knowledge_base_ids: [], mcp_servers: [], skill_package_ids: [],
-          file_overrides: [{name: 'AGENTS.md', content: spec.rules + roleContext}],
+          file_overrides: [{name: 'AGENTS.md', content: rules + roleContext}],
           welcome_message: `在「${name}」里，今天想从哪里说起？`,
         });
       }
@@ -117,5 +132,5 @@ export function createRoles(config, upstream, store, defaultLibrary) {
     pending.set(uid, operation);
     try { return await operation; } finally { if (pending.get(uid) === operation) pending.delete(uid); }
   }
-  return {resolve, list, create, library};
+  return {resolve, list, create, library, canCreate};
 }

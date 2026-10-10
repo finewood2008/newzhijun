@@ -9,6 +9,7 @@ test('desktop bridge pins TLS, keeps cookies out of renderer and reconnects with
   if(req.url==='/identity')return res.end(JSON.stringify({serverId:'fixture',product:'zhijun',protocol:1}));
   calls++;assert.equal(req.headers.origin,'zhijun://desktop');assert.equal(req.headers['x-zhijun-client'],'desktop-v1');
   if(req.url==='/api/login'){res.setHeader('Set-Cookie','zhijun_session=secret; HttpOnly; SameSite=Strict');return res.end('{}')}
+  if(req.url==='/api/connection/select'){res.setHeader('Set-Cookie',['zhijun_backend=box-b; HttpOnly','zhijun_session=; Max-Age=0','unrelated=ignored']);return res.end('{}')}
   if(req.url==='/api/revoked'){res.statusCode=401;return res.end('{}')}
   if(req.url==='/api/role-check')assert.equal(req.headers['x-zhijun-role'],'work');assert.equal(req.headers.cookie,'zhijun_session=secret');res.end('{"ready":true}');
  });const wss=new WebSocketServer({server:remote});wss.on('connection',(ws,req)=>{sockets.add(ws);assert.equal(new URL(req.url,'https://localhost').searchParams.get('role'),'work');assert.equal(req.headers.cookie,'zhijun_session=secret');ws.send('ready');ws.on('message',msg=>{turns++;ws.send(msg.toString())});});
@@ -26,4 +27,7 @@ test('desktop bridge pins TLS, keeps cookies out of renderer and reconnects with
  client=await open();assert.equal(turns,1,'new connection must not replay previous turn');client.close();
  connection.endpoint=null;assert.equal((await request('/api/me')).status,503);connection.endpoint=endpoint;assert.equal((await (await request('/api/me')).json()).ready,true);
  assert.equal((await request('/api/revoked')).status,401);assert.equal(vault.cookie,'');
+ await request('/api/connection/select',{method:'POST'});assert.equal(vault.cookie,'zhijun_backend=box-b');
+ await request('/api/login',{method:'POST'});assert.equal(vault.cookie,'zhijun_backend=box-b; zhijun_session=secret');
+ await request('/api/revoked');assert.equal(vault.cookie,'zhijun_backend=box-b','expired login must not silently select the default backend');
 });

@@ -11,8 +11,9 @@ export function createDefaultLibrary(upstream,config){
    const remembered=configured||chosen.get(uid);
    let base=remembered?owned.find(b=>b.id===remembered):null;
    if(remembered&&!base)fail(409,'LIBRARY_UNAVAILABLE','默认知识库暂不可用，请联系管理员。');
-   if(!base)base=[...owned].sort((a,b)=>Number(!!b.default_open)-Number(!!a.default_open)||String(a.created_at||'').localeCompare(String(b.created_at||''))||String(a.id).localeCompare(String(b.id)))[0];
-   if(!base)base=await upstream('/knowledge-bases',session,'POST',{name:'我的知识库',shared:false,default_open:true});
+   const libraryName=config.bindings[uid]?.libraryName;
+   if(!base)base=libraryName?owned.find(b=>b.name===libraryName):[...owned].filter(b=>!String(b.name||'').startsWith('知君 · 专家资料 · ')).sort((a,b)=>Number(!!b.default_open)-Number(!!a.default_open)||String(a.created_at||'').localeCompare(String(b.created_at||''))||String(a.id).localeCompare(String(b.id)))[0];
+   if(!base)base=await upstream('/knowledge-bases',session,'POST',{name:libraryName||'我的知识库',shared:false,default_open:!libraryName});
    assertPrivateBase(base,session.user);chosen.set(uid,base.id);
    return {...base,default_open:true};
   })();

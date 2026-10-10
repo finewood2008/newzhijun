@@ -10,6 +10,6 @@ export function createSessionStore(directory){
  if(key.length!==32)throw new Error('Invalid session key');
  return {
   load(){try{const data=readFileSync(dataPath),decipher=createDecipheriv('aes-256-gcm',key,data.subarray(0,12));decipher.setAuthTag(data.subarray(12,28));const values=JSON.parse(Buffer.concat([decipher.update(data.subarray(28)),decipher.final()]).toString());return values.filter(s=>/^[a-f0-9]{64}$/.test(s.sid)&&typeof s.token==='string'&&s.user?.id&&s.expires>Date.now());}catch{return []; }},
-  save(sessions){const values=[...sessions.values()].filter(s=>s.expires>Date.now()).map(({sid,token,user,expires})=>({sid,token,user,expires}));const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv);const encrypted=Buffer.concat([cipher.update(JSON.stringify(values)),cipher.final()]);writeFileSync(dataPath+'.tmp',Buffer.concat([iv,cipher.getAuthTag(),encrypted]),{mode:0o600});renameSync(dataPath+'.tmp',dataPath);}
+  save(sessions){const values=[...sessions.values()].filter(s=>s.expires>Date.now()).map(({sid,token,user,expires,agentId,sourceExpertId})=>({sid,token,user,expires,agentId,sourceExpertId}));const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv);const encrypted=Buffer.concat([cipher.update(JSON.stringify(values)),cipher.final()]);writeFileSync(dataPath+'.tmp',Buffer.concat([iv,cipher.getAuthTag(),encrypted]),{mode:0o600});renameSync(dataPath+'.tmp',dataPath);}
  };
 }

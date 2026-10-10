@@ -1,4 +1,7 @@
 let activeRole = 'personal';
+let activeExpert = '';
+export const getActiveExpert = () => activeExpert;
+export function setActiveExpert(expert: string) {if(expert!==activeExpert){setActiveRole('personal',true);activeExpert=expert;}}
 let roleRequests = new AbortController();
 export const getActiveRole = () => activeRole;
 export function setActiveRole(role: string, force = false) {
@@ -10,16 +13,17 @@ export function setActiveRole(role: string, force = false) {
 export function roleRequestOptions(options: RequestInit = {}): RequestInit {
   const headers = new Headers(options.headers);
   headers.set('X-Zhijun-Role', activeRole);
+  if(activeExpert)headers.set('X-Zhijun-Expert',activeExpert);
   return {...options, headers, signal: options.signal ? AbortSignal.any([options.signal, roleRequests.signal]) : roleRequests.signal};
 }
 export async function api<T=any>(path:string, method='GET', body?:unknown, signal?:AbortSignal):Promise<T> {
   const r=await fetch('/api'+path,roleRequestOptions({method,signal,headers:body instanceof FormData?{}:body===undefined?{}:{'Content-Type':'application/json'},body:body instanceof FormData?body:body===undefined?undefined:JSON.stringify(body)}));
   const data=await r.json();
-  if(!r.ok){if(r.status===401)window.dispatchEvent(new Event('session-expired'));throw new Error(data.message||'暂时无法完成操作。');}
+  if(!r.ok){if(r.status===401)window.dispatchEvent(new Event('session-expired'));if(data.code==='EXPERT_CHANGED')window.dispatchEvent(new Event('expert-changed'));throw new Error(data.message||'暂时无法完成操作。');}
   return data;
 }
 export type Role={id:string;name:string;description:string};
-export type User={id:number;name:string;ready:boolean;reason:string;roles?:Role[];canCreateRoles?:boolean};
+export type User={id:number;name:string;ready:boolean;reason:string;expertId?:string;expertChoices?:{id:string;name:string}[];roles?:Role[];canCreateRoles?:boolean};
 export type Thread={thread_id:string;title:string;last_active:number};
 export function textContent(content:unknown):string {
   if(typeof content==='string') return content;
